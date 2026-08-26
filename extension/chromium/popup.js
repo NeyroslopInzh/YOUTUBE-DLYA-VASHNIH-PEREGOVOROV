@@ -144,37 +144,32 @@ function setBusy(busy) {
   els.btnCalcEnd.disabled = busy;
 }
 
-function ensureMp4Filename(name) {
-  const trimmed = String(name || "clip").trim() || "clip";
-  return trimmed.toLowerCase().endsWith(".mp4") ? trimmed : `${trimmed}.mp4`;
-}
-
-async function triggerBrowserDownload(jobId, filename) {
-  const safeName = ensureMp4Filename(filename);
+async function triggerBrowserDownload(jobId) {
   const url = `${COMPANION_URL}/jobs/${jobId}/file`;
 
-  await new Promise((resolve, reject) => {
+  const downloadId = await new Promise((resolve, reject) => {
     chrome.downloads.download(
       {
         url,
-        filename: safeName,
-        // saveAs не задаём — браузер сам: «Спросить где» или папка по умолчанию
+        saveAs: false,
+        conflictAction: "uniquify",
+        // filename не задаём — Chrome сам: папка из настроек или диалог «Сохранить как»
       },
-      (downloadId) => {
+      (id) => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
           return;
         }
-        if (downloadId === undefined) {
+        if (id === undefined) {
           reject(new Error("Браузер не начал скачивание"));
           return;
         }
-        resolve(downloadId);
+        resolve(id);
       }
     );
   });
 
-  return safeName;
+  return downloadId;
 }
 
 async function pollJob(jobId) {
@@ -204,10 +199,10 @@ async function pollJob(jobId) {
   if (data.status === "done") {
     setStatus("Скачивание…");
     try {
-      const name = await triggerBrowserDownload(jobId, data.filename || els.title.value.trim());
+      await triggerBrowserDownload(jobId);
       setStatus("Готово");
-      appendLog(`Файл передан браузеру: ${name}`);
-      appendLog("Папка — как в настройках Chrome (Загрузки).");
+      appendLog("Файл передан в загрузки Chrome.");
+      appendLog("Смотри панель загрузок браузера — путь из chrome://settings/downloads.");
     } catch (err) {
       setStatus("Ошибка");
       appendLog(`Не удалось скачать через браузер: ${err.message}`);

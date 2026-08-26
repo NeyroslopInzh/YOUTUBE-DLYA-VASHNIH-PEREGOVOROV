@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import json
 import mimetypes
+import os
 import sys
-import tempfile
 import threading
 import traceback
 import uuid
@@ -29,7 +29,20 @@ from clipper import ClipRequest, ClipperError, download_clip  # noqa: E402
 
 HOST = "127.0.0.1"
 PORT = 8765
-TEMP_ROOT = Path(tempfile.gettempdir()) / "yvp-companion"
+
+
+def _system_temp_root() -> Path:
+    """Системный temp, никогда папка проекта (Cursor иногда подменяет %TEMP%)."""
+    if sys.platform == "win32":
+        local = os.environ.get("LOCALAPPDATA")
+        if local:
+            return Path(local) / "Temp" / "yvp-companion"
+    if sys.platform == "darwin":
+        return Path("/var/tmp/yvp-companion")
+    return Path("/tmp/yvp-companion")
+
+
+TEMP_ROOT = _system_temp_root()
 
 _jobs: dict[str, dict[str, Any]] = {}
 _jobs_lock = threading.Lock()
