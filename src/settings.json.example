@@ -3,5 +3,6 @@
   "start": "6:01",
   "end": "6:07",
   "title": "Кому-то это может показаться крутым",
-  "output_dir": "./videos download"
+  "output_dir": "./videos download",
+  "language": "ru"
 }

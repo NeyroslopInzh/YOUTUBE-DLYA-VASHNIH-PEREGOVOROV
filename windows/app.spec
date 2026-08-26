@@ -46,7 +46,7 @@ a = Analysis(
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports
-    + ["clipper", "app_log", "settings", "app_name", "paths", "keyboard"],
+    + ["clipper", "app_log", "settings", "app_name", "paths", "keyboard", "i18n"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

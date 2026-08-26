@@ -64,6 +64,7 @@ sudo pacman -U yvp-vashnie-peregovori-*.pkg.tar.zst
 
 | Поле | Формат |
 |------|--------|
+| Язык | Русский, English, עברית, हिन्दी, Oʻzbekcha |
 | Ссылка | URL YouTube |
 | Начало / конец | `MM:SS`, `HH:MM:SS`, секунды |
 | Название | имя mp4 без расширения |

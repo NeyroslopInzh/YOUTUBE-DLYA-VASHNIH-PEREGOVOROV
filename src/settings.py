@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from app_log import APP_DIR
+from i18n import DEFAULT_LANG
 from paths import default_output_dir, ensure_output_dir, normalize_saved_output_dir
 
 
@@ -20,6 +21,7 @@ class FormSettings:
     end: str = "1:00"
     title: str = ""
     output_dir: str = ""
+    language: str = DEFAULT_LANG
 
 
 def load_settings(default_output_dir_str: str | None = None) -> FormSettings:
@@ -38,6 +40,7 @@ def load_settings(default_output_dir_str: str | None = None) -> FormSettings:
             end=str(raw.get("end", "1:00")),
             title=str(raw.get("title", "")),
             output_dir=normalize_saved_output_dir(saved_dir, default_path),
+            language=str(raw.get("language") or DEFAULT_LANG),
         )
     except (OSError, json.JSONDecodeError, TypeError, ValueError):
         return FormSettings(output_dir=default_str)

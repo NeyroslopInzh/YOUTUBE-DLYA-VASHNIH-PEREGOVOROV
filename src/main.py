@@ -15,6 +15,7 @@ import customtkinter as ctk
 from app_log import get_log_file, logger, setup_logging
 from app_name import APP_NAME
 from clipper import ClipRequest, ClipperError, download_clip
+from i18n import LANGUAGES, code_from_label, get_i18n, label_from_code, set_language
 from keyboard import bind_layout_safe_shortcuts, is_layout_safe_ctrl
 from paths import default_output_dir, ensure_output_dir
 from settings import FormSettings, load_settings, save_settings
@@ -28,39 +29,57 @@ class ClipperApp(ctk.CTk):
         ctk.set_default_color_theme("blue")
 
         self.title(APP_NAME)
-        self.geometry("720x560")
-        self.minsize(640, 480)
+        self.geometry("720x600")
+        self.minsize(640, 500)
 
         self._log_queue: queue.Queue[str | tuple[str, str]] = queue.Queue()
         self._worker: threading.Thread | None = None
+        self._ui_labels: dict[str, ctk.CTkLabel] = {}
+        self._entries: dict[str, ctk.CTkEntry] = {}
+        self._lang_code = "ru"
 
         saved = load_settings()
+        set_language(saved.language)
+        self._lang_code = saved.language
 
         self._build_ui(saved)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.after(100, self._poll_log)
 
-    def _build_ui(self, saved: FormSettings) -> None:
-        pad = {"padx": 16, "pady": (0, 10)}
+    def _t(self, key: str, **kwargs: object) -> str:
+        return get_i18n().t(key, **kwargs)
 
-        header = ctk.CTkLabel(
+    def _build_ui(self, saved: FormSettings) -> None:
+        self.header = ctk.CTkLabel(
             self,
             text=APP_NAME,
             font=ctk.CTkFont(size=16, weight="bold"),
             wraplength=680,
             justify="center",
         )
-        header.pack(pady=(16, 4))
+        self.header.pack(pady=(16, 4))
 
-        hint = ctk.CTkLabel(
-            self,
-            text="Время: MM:SS, HH:MM:SS или секунды. Качается только нужный кусок.",
-            text_color="gray70",
-        )
-        hint.pack(pady=(0, 12))
+        self.hint_label = ctk.CTkLabel(self, text=self._t("ui.hint"), text_color="gray70")
+        self.hint_label.pack(pady=(0, 12))
 
         form = ctk.CTkFrame(self)
         form.pack(fill="x", padx=16, pady=(0, 8))
+
+        lang_row = ctk.CTkFrame(form, fg_color="transparent")
+        lang_row.pack(fill="x", padx=12, pady=(10, 0))
+        self._ui_labels["ui.label_language"] = ctk.CTkLabel(
+            lang_row, text=self._t("ui.label_language"), width=140, anchor="w"
+        )
+        self._ui_labels["ui.label_language"].pack(side="left")
+        self.lang_var = tk.StringVar(value=label_from_code(saved.language))
+        self.lang_menu = ctk.CTkOptionMenu(
+            lang_row,
+            variable=self.lang_var,
+            values=[name for _, name in LANGUAGES],
+            command=self._on_language_change,
+            width=180,
+        )
+        self.lang_menu.pack(side="left", padx=(8, 0))
 
         self.url_var = tk.StringVar(value=saved.url)
         self.start_var = tk.StringVar(value=saved.start)
@@ -68,50 +87,52 @@ class ClipperApp(ctk.CTk):
         self.title_var = tk.StringVar(value=saved.title)
         self.dir_var = tk.StringVar(value=saved.output_dir or str(default_output_dir()))
 
-        self._row(form, "Ссылка YouTube", self.url_var, placeholder="https://www.youtube.com/watch?v=...")
-        self._row(form, "Начало отрезка", self.start_var, placeholder="1:30 или 90")
-        self._row(form, "Конец отрезка", self.end_var, placeholder="3:45 или 225")
-        self._row(form, "Название файла", self.title_var, placeholder="мой_клип")
+        self._row(form, "ui.label_url", self.url_var, "ui.ph_url")
+        self._row(form, "ui.label_start", self.start_var, "ui.ph_start")
+        self._row(form, "ui.label_end", self.end_var, "ui.ph_end")
+        self._row(form, "ui.label_title", self.title_var, "ui.ph_title")
 
         dir_row = ctk.CTkFrame(form, fg_color="transparent")
         dir_row.pack(fill="x", padx=12, pady=(0, 10))
-        ctk.CTkLabel(dir_row, text="Папка сохранения", width=140, anchor="w").pack(side="left")
-        ctk.CTkEntry(dir_row, textvariable=self.dir_var).pack(side="left", fill="x", expand=True, padx=(8, 8))
-        ctk.CTkButton(dir_row, text="Обзор…", width=80, command=self._pick_dir).pack(side="right")
+        self._ui_labels["ui.label_output_dir"] = ctk.CTkLabel(
+            dir_row, text=self._t("ui.label_output_dir"), width=140, anchor="w"
+        )
+        self._ui_labels["ui.label_output_dir"].pack(side="left")
+        self._entries["dir"] = ctk.CTkEntry(dir_row, textvariable=self.dir_var)
+        self._entries["dir"].pack(side="left", fill="x", expand=True, padx=(8, 8))
+        self.browse_btn = ctk.CTkButton(dir_row, text=self._t("ui.btn_browse"), width=80, command=self._pick_dir)
+        self.browse_btn.pack(side="right")
 
         btn_row = ctk.CTkFrame(self, fg_color="transparent")
         btn_row.pack(fill="x", padx=16, pady=(0, 8))
 
         self.download_btn = ctk.CTkButton(
             btn_row,
-            text="Скачать отрезок",
+            text=self._t("ui.btn_download"),
             height=40,
             font=ctk.CTkFont(size=15, weight="bold"),
             command=self._on_download,
         )
         self.download_btn.pack(side="left")
 
-        ctk.CTkButton(
-            btn_row,
-            text="Копировать лог",
-            width=110,
-            command=self._copy_log,
-        ).pack(side="left", padx=(8, 0))
+        self.copy_log_btn = ctk.CTkButton(
+            btn_row, text=self._t("ui.btn_copy_log"), width=110, command=self._copy_log
+        )
+        self.copy_log_btn.pack(side="left", padx=(8, 0))
 
-        ctk.CTkButton(
-            btn_row,
-            text="Логи",
-            width=70,
-            command=self._open_logs,
-        ).pack(side="left", padx=(8, 0))
+        self.logs_btn = ctk.CTkButton(
+            btn_row, text=self._t("ui.btn_logs"), width=70, command=self._open_logs
+        )
+        self.logs_btn.pack(side="left", padx=(8, 0))
 
-        self.status_label = ctk.CTkLabel(btn_row, text="Готов", text_color="gray70")
+        self.status_label = ctk.CTkLabel(btn_row, text=self._t("ui.status_ready"), text_color="gray70")
         self.status_label.pack(side="left", padx=16)
 
         log_frame = ctk.CTkFrame(self)
         log_frame.pack(fill="both", expand=True, padx=16, pady=(0, 16))
 
-        ctk.CTkLabel(log_frame, text="Лог", anchor="w").pack(fill="x", padx=12, pady=(8, 4))
+        self._ui_labels["ui.log_title"] = ctk.CTkLabel(log_frame, text=self._t("ui.log_title"), anchor="w")
+        self._ui_labels["ui.log_title"].pack(fill="x", padx=12, pady=(8, 4))
 
         self.log_box = ctk.CTkTextbox(log_frame, font=ctk.CTkFont(family="Consolas", size=12))
         self.log_box.pack(fill="both", expand=True, padx=12, pady=(0, 12))
@@ -123,13 +144,63 @@ class ClipperApp(ctk.CTk):
             on_select_all_log=lambda: self._select_all_log(None),
         )
 
+    def _on_language_change(self, choice: str) -> None:
+        self._lang_code = code_from_label(choice)
+        set_language(self._lang_code)
+        self._apply_language()
+
+    def _apply_language(self) -> None:
+        self.hint_label.configure(text=self._t("ui.hint"))
+        for key, widget in self._ui_labels.items():
+            widget.configure(text=self._t(key))
+        self.browse_btn.configure(text=self._t("ui.btn_browse"))
+        self.download_btn.configure(text=self._t("ui.btn_download"))
+        self.copy_log_btn.configure(text=self._t("ui.btn_copy_log"))
+        self.logs_btn.configure(text=self._t("ui.btn_logs"))
+        if not (self._worker and self._worker.is_alive()):
+            self.status_label.configure(text=self._t("ui.status_ready"))
+        placeholders = {
+            "ui.label_url": "ui.ph_url",
+            "ui.label_start": "ui.ph_start",
+            "ui.label_end": "ui.ph_end",
+            "ui.label_title": "ui.ph_title",
+        }
+        for label_key, ph_key in placeholders.items():
+            entry = self._entries.get(label_key)
+            if entry:
+                entry.configure(placeholder_text=self._t(ph_key))
+        self._log_menu.entryconfigure(0, label=self._t("ui.menu_copy"))
+        self._log_menu.entryconfigure(1, label=self._t("ui.menu_select_all"))
+
+    def _row(
+        self,
+        parent: ctk.CTkFrame,
+        label_key: str,
+        variable: tk.StringVar,
+        placeholder_key: str = "",
+    ) -> None:
+        row = ctk.CTkFrame(parent, fg_color="transparent")
+        row.pack(fill="x", padx=12, pady=(10, 0))
+        label = ctk.CTkLabel(row, text=self._t(label_key), width=140, anchor="w")
+        label.pack(side="left")
+        self._ui_labels[label_key] = label
+        entry = ctk.CTkEntry(
+            row,
+            textvariable=variable,
+            placeholder_text=self._t(placeholder_key) if placeholder_key else "",
+        )
+        entry.pack(side="left", fill="x", expand=True, padx=(8, 0))
+        self._entries[label_key] = entry
+
     def _setup_log_interactions(self) -> None:
         text = self.log_box._textbox
         text.configure(exportselection=True)
 
         self._log_menu = tk.Menu(self, tearoff=0)
-        self._log_menu.add_command(label="Копировать", command=self._copy_log)
-        self._log_menu.add_command(label="Выделить всё", command=lambda: self._select_all_log(None))
+        self._log_menu.add_command(label=self._t("ui.menu_copy"), command=self._copy_log)
+        self._log_menu.add_command(
+            label=self._t("ui.menu_select_all"), command=lambda: self._select_all_log(None)
+        )
 
         text.bind("<Key>", self._on_log_key)
         text.bind("<Button-3>", self._show_log_menu)
@@ -138,21 +209,8 @@ class ClipperApp(ctk.CTk):
         if is_layout_safe_ctrl(event):
             return None
         if event.keysym in {
-            "Shift_L",
-            "Shift_R",
-            "Control_L",
-            "Control_R",
-            "Alt_L",
-            "Alt_R",
-            "Left",
-            "Right",
-            "Up",
-            "Down",
-            "Home",
-            "End",
-            "Prior",
-            "Next",
-            "Tab",
+            "Shift_L", "Shift_R", "Control_L", "Control_R", "Alt_L", "Alt_R",
+            "Left", "Right", "Up", "Down", "Home", "End", "Prior", "Next", "Tab",
         }:
             return None
         return "break"
@@ -163,7 +221,7 @@ class ClipperApp(ctk.CTk):
         finally:
             self._log_menu.grab_release()
 
-    def _select_all_log(self, _event: tk.Event | None = None) -> None:
+    def _select_all_log(self, _event: tk.Event | None = None) -> str | None:
         text = self.log_box._textbox
         text.tag_add("sel", "1.0", "end-1c")
         text.mark_set("insert", "end-1c")
@@ -181,20 +239,6 @@ class ClipperApp(ctk.CTk):
         self.clipboard_clear()
         self.clipboard_append(selection)
         self.update()
-
-    def _row(
-        self,
-        parent: ctk.CTkFrame,
-        label: str,
-        variable: tk.StringVar,
-        placeholder: str = "",
-    ) -> None:
-        row = ctk.CTkFrame(parent, fg_color="transparent")
-        row.pack(fill="x", padx=12, pady=(10, 0))
-        ctk.CTkLabel(row, text=label, width=140, anchor="w").pack(side="left")
-        ctk.CTkEntry(row, textvariable=variable, placeholder_text=placeholder).pack(
-            side="left", fill="x", expand=True, padx=(8, 0)
-        )
 
     def _pick_dir(self) -> None:
         current = self.dir_var.get().strip()
@@ -222,14 +266,14 @@ class ClipperApp(ctk.CTk):
             end=self.end_var.get().strip(),
             title=self.title_var.get().strip(),
             output_dir=self.dir_var.get().strip(),
+            language=self._lang_code,
         )
 
     def _on_close(self) -> None:
         try:
             save_settings(self._collect_settings())
-            logger().info("Настройки сохранены при выходе")
         except OSError as exc:
-            logger().error("Не удалось сохранить настройки: %s", exc)
+            logger().error("Settings save failed: %s", exc)
         self.destroy()
 
     def _append_log(self, text: str) -> None:
@@ -260,24 +304,24 @@ class ClipperApp(ctk.CTk):
         self.after(100, self._poll_log)
 
     def _set_busy(self, busy: bool) -> None:
-        state = "disabled" if busy else "normal"
-        self.download_btn.configure(state=state)
+        self.download_btn.configure(state="disabled" if busy else "normal")
 
     def _on_download(self) -> None:
         if self._worker and self._worker.is_alive():
             return
 
         self._set_busy(True)
-        self._log_queue.put(("status", "Загрузка…"))
+        self._log_queue.put(("status", self._t("ui.status_downloading")))
 
         try:
             output_dir = ensure_output_dir(self.dir_var.get())
             self.dir_var.set(str(output_dir))
         except OSError as exc:
             self._set_busy(False)
-            messagebox.showerror(APP_NAME, f"Не удалось создать папку сохранения:\n{exc}")
+            messagebox.showerror(APP_NAME, self._t("ui.msg_output_dir_fail", error=exc))
             return
 
+        lang = self._lang_code
         request = ClipRequest(
             url=self.url_var.get(),
             start=self.start_var.get(),
@@ -287,24 +331,25 @@ class ClipperApp(ctk.CTk):
         )
 
         def worker() -> None:
-            log = setup_logging()
+            setup_logging()
+            set_language(lang)
             try:
                 def on_log(msg: str) -> None:
                     self._log_queue.put(msg)
 
-                result = download_clip(request, on_log=on_log)
-                self._log_queue.put(("done", f"Сохранено:\n{result.output_path}"))
-                self._log_queue.put(("status", "Готово"))
+                result = download_clip(request, on_log=on_log, language=lang)
+                self._log_queue.put(("done", self._t("ui.msg_saved", path=result.output_path)))
+                self._log_queue.put(("status", self._t("ui.status_done")))
             except ClipperError as exc:
-                log.exception("ClipperError")
+                logger().exception("ClipperError")
                 self._log_queue.put(str(exc))
                 self._log_queue.put(("error", str(exc)))
-                self._log_queue.put(("status", "Ошибка"))
+                self._log_queue.put(("status", self._t("ui.status_error")))
             except Exception as exc:  # noqa: BLE001
-                log.exception("Неожиданная ошибка")
+                logger().exception("Unexpected error")
                 self._log_queue.put(str(exc))
-                self._log_queue.put(("error", f"Неожиданная ошибка:\n{exc}"))
-                self._log_queue.put(("status", "Ошибка"))
+                self._log_queue.put(("error", self._t("ui.msg_unexpected", error=exc)))
+                self._log_queue.put(("status", self._t("ui.status_error")))
 
         self._worker = threading.Thread(target=worker, daemon=True)
         self._worker.start()

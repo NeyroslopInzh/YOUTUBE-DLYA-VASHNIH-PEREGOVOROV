@@ -110,10 +110,21 @@ yvp-vashnie-peregovori
 ## Возможности
 
 - Ссылка + время начала/конца + имя файла + папка
+- **Языки интерфейса:** Русский, English, עברית, हिन्दी, Oʻzbekcha — выбор в выпадающем списке «Язык», сохраняется в `settings.json`
 - Автосохранение полей (`settings.json` рядом с exe/бинарником)
 - Логи: `logs/clipper.log`
 - Русская раскладка: Ctrl+C/V/A работают на Windows
 - Папка по умолчанию: `~/Видео/YouTubeClips` или `~/Videos/YouTubeClips`
+
+## Документация на других языках
+
+| Язык | README | Инструкция |
+|------|--------|------------|
+| Русский | этот файл | [docs/INSTRUCTIONS.md](docs/INSTRUCTIONS.md) |
+| English | [docs/README.en.md](docs/README.en.md) | [docs/INSTRUCTIONS.en.md](docs/INSTRUCTIONS.en.md) |
+| עברית | [docs/README.he.md](docs/README.he.md) | [docs/INSTRUCTIONS.he.md](docs/INSTRUCTIONS.he.md) |
+| हिन्दी | [docs/README.hi.md](docs/README.hi.md) | [docs/INSTRUCTIONS.hi.md](docs/INSTRUCTIONS.hi.md) |
+| Oʻzbekcha | [docs/README.uz.md](docs/README.uz.md) | [docs/INSTRUCTIONS.uz.md](docs/INSTRUCTIONS.uz.md) |
 
 ## Подробнее
 

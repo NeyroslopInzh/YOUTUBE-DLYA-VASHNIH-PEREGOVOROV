@@ -1,0 +1,303 @@
+"""Переводы интерфейса и сообщений об ошибках."""
+
+from __future__ import annotations
+
+from typing import Any
+
+# Порядок: ru, en, he, hi, uz
+LANGUAGES: list[tuple[str, str]] = [
+    ("ru", "Русский"),
+    ("en", "English"),
+    ("he", "עברית"),
+    ("hi", "हिन्दी"),
+    ("uz", "Oʻzbekcha"),
+]
+
+DEFAULT_LANG = "ru"
+
+STRINGS: dict[str, dict[str, str]] = {
+    "ru": {
+        "ui.hint": "Время: MM:SS, HH:MM:SS или секунды. Качается только нужный кусок.",
+        "ui.label_url": "Ссылка YouTube",
+        "ui.label_start": "Начало отрезка",
+        "ui.label_end": "Конец отрезка",
+        "ui.label_title": "Название файла",
+        "ui.label_output_dir": "Папка сохранения",
+        "ui.label_language": "Язык",
+        "ui.ph_url": "https://www.youtube.com/watch?v=...",
+        "ui.ph_start": "1:30 или 90",
+        "ui.ph_end": "3:45 или 225",
+        "ui.ph_title": "мой_клип",
+        "ui.btn_browse": "Обзор…",
+        "ui.btn_download": "Скачать отрезок",
+        "ui.btn_copy_log": "Копировать лог",
+        "ui.btn_logs": "Логи",
+        "ui.status_ready": "Готов",
+        "ui.status_downloading": "Загрузка…",
+        "ui.status_done": "Готово",
+        "ui.status_error": "Ошибка",
+        "ui.log_title": "Лог",
+        "ui.menu_copy": "Копировать",
+        "ui.menu_select_all": "Выделить всё",
+        "ui.msg_saved": "Сохранено:\n{path}",
+        "ui.msg_unexpected": "Неожиданная ошибка:\n{error}",
+        "ui.msg_output_dir_fail": "Не удалось создать папку сохранения:\n{error}",
+        "err.empty_url": "Ссылка на YouTube не указана",
+        "err.not_youtube": "Нужна ссылка на YouTube",
+        "err.time_empty": "Время не указано",
+        "err.time_invalid": "Неверный формат времени: {value!r} (ожидается MM:SS, HH:MM:SS или секунды)",
+        "err.end_before_start": "Время окончания должно быть позже времени начала",
+        "err.title_empty": "Название файла пустое",
+        "err.file_exists": "Файл уже существует: {path}",
+        "err.file_not_found": "Файл не найден после загрузки",
+        "err.output_dir": "Не удалось создать папку сохранения: {path}\n{error}",
+        "err.ffmpeg_missing_linux": "ffmpeg не найден в PATH. Установи: sudo pacman -S ffmpeg (Arch) или apt install ffmpeg",
+        "err.ffmpeg_missing_win": "ffmpeg не найден. Переустанови приложение или добавь ffmpeg в PATH.",
+        "err.ffmpeg_segfault": "ffmpeg упал (segfault, код -11). На Linux: sudo pacman -S ffmpeg и перезапуск.",
+        "err.winerror_10054": "YouTube оборвал соединение (WinError 10054). Повтор через минуту, VPN или другая сеть.",
+        "err.api_page": "Не удалось получить данные видео с YouTube. Проверь интернет/VPN.",
+        "err.bot_check": "YouTube просит проверку. Попробуй VPN или другую сеть.",
+        "err.ytdlp_code": "yt-dlp завершился с кодом {code}.\n{tail}",
+        "clip.downloading": "Скачиваю отрезок {start} — {end}",
+        "clip.saving": "Сохраняю в: {path}",
+        "clip.retry": "Повтор {attempt}/{total} через {wait} сек...",
+        "clip.done": "Готово!",
+    },
+    "en": {
+        "ui.hint": "Time: MM:SS, HH:MM:SS or seconds. Only the selected segment is downloaded.",
+        "ui.label_url": "YouTube link",
+        "ui.label_start": "Start time",
+        "ui.label_end": "End time",
+        "ui.label_title": "File name",
+        "ui.label_output_dir": "Save folder",
+        "ui.label_language": "Language",
+        "ui.ph_url": "https://www.youtube.com/watch?v=...",
+        "ui.ph_start": "1:30 or 90",
+        "ui.ph_end": "3:45 or 225",
+        "ui.ph_title": "my_clip",
+        "ui.btn_browse": "Browse…",
+        "ui.btn_download": "Download clip",
+        "ui.btn_copy_log": "Copy log",
+        "ui.btn_logs": "Logs",
+        "ui.status_ready": "Ready",
+        "ui.status_downloading": "Downloading…",
+        "ui.status_done": "Done",
+        "ui.status_error": "Error",
+        "ui.log_title": "Log",
+        "ui.menu_copy": "Copy",
+        "ui.menu_select_all": "Select all",
+        "ui.msg_saved": "Saved:\n{path}",
+        "ui.msg_unexpected": "Unexpected error:\n{error}",
+        "ui.msg_output_dir_fail": "Could not create output folder:\n{error}",
+        "err.empty_url": "YouTube URL is required",
+        "err.not_youtube": "A valid YouTube URL is required",
+        "err.time_empty": "Time is required",
+        "err.time_invalid": "Invalid time format: {value!r} (use MM:SS, HH:MM:SS or seconds)",
+        "err.end_before_start": "End time must be after start time",
+        "err.title_empty": "File name is empty",
+        "err.file_exists": "File already exists: {path}",
+        "err.file_not_found": "Output file not found after download",
+        "err.output_dir": "Could not create folder: {path}\n{error}",
+        "err.ffmpeg_missing_linux": "ffmpeg not found in PATH. Install: sudo pacman -S ffmpeg or apt install ffmpeg",
+        "err.ffmpeg_missing_win": "ffmpeg not found. Reinstall the app or add ffmpeg to PATH.",
+        "err.ffmpeg_segfault": "ffmpeg crashed (segfault, code -11). On Linux install system ffmpeg and restart.",
+        "err.winerror_10054": "YouTube closed the connection (WinError 10054). Retry, VPN or another network.",
+        "err.api_page": "Could not fetch video data from YouTube. Check internet/VPN.",
+        "err.bot_check": "YouTube wants verification. Try VPN or another network.",
+        "err.ytdlp_code": "yt-dlp exited with code {code}.\n{tail}",
+        "clip.downloading": "Downloading {start} — {end}",
+        "clip.saving": "Saving to: {path}",
+        "clip.retry": "Retry {attempt}/{total} in {wait} sec...",
+        "clip.done": "Done!",
+    },
+    "he": {
+        "ui.hint": "זמן: MM:SS, HH:MM:SS או שניות. מוריד רק את הקטע שנבחר.",
+        "ui.label_url": "קישור YouTube",
+        "ui.label_start": "תחילת קטע",
+        "ui.label_end": "סוף קטע",
+        "ui.label_title": "שם קובץ",
+        "ui.label_output_dir": "תיקיית שמירה",
+        "ui.label_language": "שפה",
+        "ui.ph_url": "https://www.youtube.com/watch?v=...",
+        "ui.ph_start": "1:30 או 90",
+        "ui.ph_end": "3:45 או 225",
+        "ui.ph_title": "הקליפ_שלי",
+        "ui.btn_browse": "עיון…",
+        "ui.btn_download": "הורד קטע",
+        "ui.btn_copy_log": "העתק לוג",
+        "ui.btn_logs": "לוגים",
+        "ui.status_ready": "מוכן",
+        "ui.status_downloading": "מוריד…",
+        "ui.status_done": "הושלם",
+        "ui.status_error": "שגיאה",
+        "ui.log_title": "לוג",
+        "ui.menu_copy": "העתק",
+        "ui.menu_select_all": "בחר הכל",
+        "ui.msg_saved": "נשמר:\n{path}",
+        "ui.msg_unexpected": "שגיאה בלתי צפויה:\n{error}",
+        "ui.msg_output_dir_fail": "לא ניתן ליצור תיקייה:\n{error}",
+        "err.empty_url": "נדרש קישור YouTube",
+        "err.not_youtube": "נדרש קישור YouTube תקין",
+        "err.time_empty": "לא צוין זמן",
+        "err.time_invalid": "פורמט זמן לא תקין: {value!r} (MM:SS, HH:MM:SS או שניות)",
+        "err.end_before_start": "זמן הסיום חייב להיות אחרי זמן ההתחלה",
+        "err.title_empty": "שם הקובץ ריק",
+        "err.file_exists": "הקובץ כבר קיים: {path}",
+        "err.file_not_found": "הקובץ לא נמצא אחרי ההורדה",
+        "err.output_dir": "לא ניתן ליצור תיקייה: {path}\n{error}",
+        "err.ffmpeg_missing_linux": "ffmpeg לא נמצא. התקן: sudo pacman -S ffmpeg או apt install ffmpeg",
+        "err.ffmpeg_missing_win": "ffmpeg לא נמצא. התקן מחדש או הוסף ffmpeg ל-PATH.",
+        "err.ffmpeg_segfault": "ffmpeg קrashed (segfault). התקן ffmpeg מערכת והפעל מחדש.",
+        "err.winerror_10054": "YouTube ניתק את החיבור. נסה שוב, VPN או רשת אחרת.",
+        "err.api_page": "לא ניתן לקבל נתוני וידאו מ-YouTube. בדוק אינטרנט/VPN.",
+        "err.bot_check": "YouTube דורש אימות. נסה VPN או רשת אחרת.",
+        "err.ytdlp_code": "yt-dlp הסתיים עם קוד {code}.\n{tail}",
+        "clip.downloading": "מוריד {start} — {end}",
+        "clip.saving": "שומר ב: {path}",
+        "clip.retry": "ניסיון {attempt}/{total} בעוד {wait} שניות...",
+        "clip.done": "הושלם!",
+    },
+    "hi": {
+        "ui.hint": "समय: MM:SS, HH:MM:SS या सेकंड। केवल चुना हुआ हिस्सा डाउनलोड होता है।",
+        "ui.label_url": "YouTube लिंक",
+        "ui.label_start": "शुरुआत",
+        "ui.label_end": "अंत",
+        "ui.label_title": "फ़ाइल नाम",
+        "ui.label_output_dir": "सेव फ़ोल्डर",
+        "ui.label_language": "भाषा",
+        "ui.ph_url": "https://www.youtube.com/watch?v=...",
+        "ui.ph_start": "1:30 या 90",
+        "ui.ph_end": "3:45 या 225",
+        "ui.ph_title": "mera_clip",
+        "ui.btn_browse": "ब्राउज़…",
+        "ui.btn_download": "क्लिप डाउनलोड",
+        "ui.btn_copy_log": "लॉग कॉपी",
+        "ui.btn_logs": "लॉग",
+        "ui.status_ready": "तैयार",
+        "ui.status_downloading": "डाउनलोड…",
+        "ui.status_done": "हो गया",
+        "ui.status_error": "त्रुटि",
+        "ui.log_title": "लॉग",
+        "ui.menu_copy": "कॉपी",
+        "ui.menu_select_all": "सब चुनें",
+        "ui.msg_saved": "सेव:\n{path}",
+        "ui.msg_unexpected": "अप्रत्याशित त्रुटि:\n{error}",
+        "ui.msg_output_dir_fail": "फ़ोल्डर नहीं बना:\n{error}",
+        "err.empty_url": "YouTube लिंक आवश्यक है",
+        "err.not_youtube": "मान्य YouTube लिंक आवश्यक है",
+        "err.time_empty": "समय नहीं दिया",
+        "err.time_invalid": "गलत समय प्रारूप: {value!r} (MM:SS, HH:MM:SS या सेकंड)",
+        "err.end_before_start": "अंत, शुरुआत के बाद होना चाहिए",
+        "err.title_empty": "फ़ाइल नाम खाली है",
+        "err.file_exists": "फ़ाइल पहले से है: {path}",
+        "err.file_not_found": "डाउनलोड के बाद फ़ाइल नहीं मिली",
+        "err.output_dir": "फ़ोल्डर नहीं बना: {path}\n{error}",
+        "err.ffmpeg_missing_linux": "ffmpeg नहीं मिला। sudo pacman -S ffmpeg या apt install ffmpeg",
+        "err.ffmpeg_missing_win": "ffmpeg नहीं मिला। ऐप दोबारा इंस्टॉल करें।",
+        "err.ffmpeg_segfault": "ffmpeg crash (segfault)। Linux पर system ffmpeg इंस्टॉल करें।",
+        "err.winerror_10054": "YouTube ने कनेक्शन तोड़ दिया। दोबारा, VPN या दूसरा नेटवर्क।",
+        "err.api_page": "YouTube से डेटा नहीं मिला। इंटरनेट/VPN जाँचें।",
+        "err.bot_check": "YouTube सत्यापन माँगता है। VPN आज़माएँ।",
+        "err.ytdlp_code": "yt-dlp कोड {code} पर बंद।\n{tail}",
+        "clip.downloading": "डाउनलोड {start} — {end}",
+        "clip.saving": "सेव: {path}",
+        "clip.retry": "पुनः {attempt}/{total}, {wait} सेकंड...",
+        "clip.done": "हो गया!",
+    },
+    "uz": {
+        "ui.hint": "Vaqt: MM:SS, HH:MM:SS yoki soniyalar. Faqat tanlangan qism yuklanadi.",
+        "ui.label_url": "YouTube havolasi",
+        "ui.label_start": "Boshlanish",
+        "ui.label_end": "Tugash",
+        "ui.label_title": "Fayl nomi",
+        "ui.label_output_dir": "Saqlash papkasi",
+        "ui.label_language": "Til",
+        "ui.ph_url": "https://www.youtube.com/watch?v=...",
+        "ui.ph_start": "1:30 yoki 90",
+        "ui.ph_end": "3:45 yoki 225",
+        "ui.ph_title": "mening_klip",
+        "ui.btn_browse": "Tanlash…",
+        "ui.btn_download": "Qismni yuklash",
+        "ui.btn_copy_log": "Logni nusxalash",
+        "ui.btn_logs": "Loglar",
+        "ui.status_ready": "Tayyor",
+        "ui.status_downloading": "Yuklanmoqda…",
+        "ui.status_done": "Tayyor",
+        "ui.status_error": "Xato",
+        "ui.log_title": "Log",
+        "ui.menu_copy": "Nusxalash",
+        "ui.menu_select_all": "Hammasini tanlash",
+        "ui.msg_saved": "Saqlandi:\n{path}",
+        "ui.msg_unexpected": "Kutilmagan xato:\n{error}",
+        "ui.msg_output_dir_fail": "Papka yaratilmadi:\n{error}",
+        "err.empty_url": "YouTube havolasi kerak",
+        "err.not_youtube": "Toʻgʻri YouTube havolasi kerak",
+        "err.time_empty": "Vaqt kiritilmagan",
+        "err.time_invalid": "Notoʻgʻri vaqt: {value!r} (MM:SS, HH:MM:SS yoki soniyalar)",
+        "err.end_before_start": "Tugash vaqti boshlanishdan keyin boʻlishi kerak",
+        "err.title_empty": "Fayl nomi boʻsh",
+        "err.file_exists": "Fayl allaqachon bor: {path}",
+        "err.file_not_found": "Yuklashdan keyin fayl topilmadi",
+        "err.output_dir": "Papka yaratilmadi: {path}\n{error}",
+        "err.ffmpeg_missing_linux": "ffmpeg topilmadi. Oʻrnating: sudo pacman -S ffmpeg yoki apt install ffmpeg",
+        "err.ffmpeg_missing_win": "ffmpeg topilmadi. Ilovani qayta oʻrnating.",
+        "err.ffmpeg_segfault": "ffmpeg ishdan chiqdi (segfault). Linuxda tizim ffmpeg oʻrnating.",
+        "err.winerror_10054": "YouTube ulanishni uzdi. Qayta urining, VPN yoki boshqa tarmoq.",
+        "err.api_page": "YouTube dan maʼlumot olinmadi. Internet/VPN ni tekshiring.",
+        "err.bot_check": "YouTube tekshiruv soʻrayapti. VPN sinab koʻring.",
+        "err.ytdlp_code": "yt-dlp {code} kod bilan tugadi.\n{tail}",
+        "clip.downloading": "Yuklanmoqda {start} — {end}",
+        "clip.saving": "Saqlash: {path}",
+        "clip.retry": "Qayta {attempt}/{total}, {wait} soniya...",
+        "clip.done": "Tayyor!",
+    },
+}
+
+# Fix Hebrew typo קrashed -> crashed in translation
+STRINGS["he"]["err.ffmpeg_segfault"] = "ffmpeg קרס (segfault). התקן ffmpeg מערכת והפעל מחדש."
+
+
+class I18n:
+    def __init__(self, lang: str = DEFAULT_LANG) -> None:
+        self.lang = lang if lang in STRINGS else DEFAULT_LANG
+
+    def t(self, key: str, **kwargs: Any) -> str:
+        text = STRINGS.get(self.lang, STRINGS[DEFAULT_LANG]).get(key)
+        if text is None:
+            text = STRINGS[DEFAULT_LANG].get(key, key)
+        if kwargs:
+            return text.format(**kwargs)
+        return text
+
+    def language_label(self) -> str:
+        for code, label in LANGUAGES:
+            if code == self.lang:
+                return label
+        return LANGUAGES[0][1]
+
+
+_i18n = I18n()
+
+
+def get_i18n() -> I18n:
+    return _i18n
+
+
+def set_language(lang: str) -> I18n:
+    global _i18n
+    _i18n = I18n(lang)
+    return _i18n
+
+
+def code_from_label(label: str) -> str:
+    for code, name in LANGUAGES:
+        if name == label:
+            return code
+    return DEFAULT_LANG
+
+
+def label_from_code(code: str) -> str:
+    for c, name in LANGUAGES:
+        if c == code:
+            return name
+    return LANGUAGES[0][1]
