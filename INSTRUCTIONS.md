@@ -172,5 +172,6 @@ sudo apt install python3-tk
 │   └── linux/
 │       └── YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL
 ├── INSTRUCTIONS.md          # эта инструкция
+├── LICENSE                  # GNU GPL v3
 └── README.md
 ```
