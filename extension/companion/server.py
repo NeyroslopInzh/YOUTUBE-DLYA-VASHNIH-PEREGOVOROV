@@ -83,9 +83,18 @@ def _append_log(job_id: str, line: str) -> None:
             job["log"].append(line)
 
 
+def _on_job_log(job_id: str, msg: str) -> None:
+    """Скрываем путь temp — пользователю финальный путь задаёт Chrome."""
+    lowered = msg.lower()
+    if lowered.startswith("сохраняю в:") or lowered.startswith("saving to:"):
+        _append_log(job_id, "Нарезка во временный буфер companion…")
+        return
+    _append_log(job_id, msg)
+
+
 def _run_job(job_id: str, request: ClipRequest) -> None:
     def on_log(msg: str) -> None:
-        _append_log(job_id, msg)
+        _on_job_log(job_id, msg)
 
     try:
         result = download_clip(request, on_log=on_log)
@@ -136,7 +145,7 @@ def _serve_job_file(handler: BaseHTTPRequestHandler, job_id: str) -> None:
 
 
 class CompanionHandler(BaseHTTPRequestHandler):
-    server_version = "YVPCompanion/0.2"
+    server_version = "YVPCompanion/0.3"
 
     def log_message(self, fmt: str, *args: object) -> None:
         print(f"[companion] {self.address_string()} {fmt % args}")
@@ -150,7 +159,11 @@ class CompanionHandler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path.rstrip("/") or "/"
 
         if path == "/health":
-            _json_response(self, 200, {"ok": True, "service": "yvp-companion"})
+            _json_response(
+                self,
+                200,
+                {"ok": True, "service": "yvp-companion", "version": "0.3", "temp_root": str(TEMP_ROOT)},
+            )
             return
 
         if path.startswith("/jobs/"):

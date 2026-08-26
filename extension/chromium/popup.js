@@ -96,7 +96,15 @@ async function checkCompanion() {
   try {
     const res = await fetch(`${COMPANION_URL}/health`, { method: "GET" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const info = await res.json();
     hide(els.companionError);
+    if (!info.temp_root) {
+      show(
+        els.companionError,
+        "Companion устарел — закрой и перезапусти extension/companion/run.bat."
+      );
+      return false;
+    }
     return true;
   } catch {
     show(
@@ -144,32 +152,48 @@ function setBusy(busy) {
   els.btnCalcEnd.disabled = busy;
 }
 
-async function triggerBrowserDownload(jobId) {
-  const url = `${COMPANION_URL}/jobs/${jobId}/file`;
+function basenameOnly(name) {
+  const raw = String(name || "clip").trim() || "clip";
+  const base = raw.replace(/[/\\]/g, "_").replace(/[<>:"|?*]/g, "_");
+  return base.toLowerCase().endsWith(".mp4") ? base : `${base}.mp4`;
+}
 
-  const downloadId = await new Promise((resolve, reject) => {
-    chrome.downloads.download(
-      {
-        url,
-        saveAs: false,
-        conflictAction: "uniquify",
-        // filename не задаём — Chrome сам: папка из настроек или диалог «Сохранить как»
-      },
-      (id) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-          return;
-        }
-        if (id === undefined) {
-          reject(new Error("Браузер не начал скачивание"));
-          return;
-        }
-        resolve(id);
-      }
-    );
-  });
+async function triggerBrowserDownload(jobId, filename) {
+  const res = await fetch(`${COMPANION_URL}/jobs/${jobId}/file`);
+  if (!res.ok) {
+    throw new Error(`Companion не отдал файл (HTTP ${res.status})`);
+  }
 
-  return downloadId;
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const safeName = basenameOnly(filename);
+
+  try {
+    const downloadId = await new Promise((resolve, reject) => {
+      chrome.downloads.download(
+        {
+          url: blobUrl,
+          filename: safeName,
+          saveAs: false,
+          conflictAction: "uniquify",
+        },
+        (id) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+          if (id === undefined) {
+            reject(new Error("Браузер не начал скачивание"));
+            return;
+          }
+          resolve(id);
+        }
+      );
+    });
+    return { downloadId, safeName };
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+  }
 }
 
 async function pollJob(jobId) {
@@ -199,10 +223,13 @@ async function pollJob(jobId) {
   if (data.status === "done") {
     setStatus("Скачивание…");
     try {
-      await triggerBrowserDownload(jobId);
+      const { safeName } = await triggerBrowserDownload(
+        jobId,
+        data.filename || els.title.value.trim()
+      );
       setStatus("Готово");
-      appendLog("Файл передан в загрузки Chrome.");
-      appendLog("Смотри панель загрузок браузера — путь из chrome://settings/downloads.");
+      appendLog(`Chrome сохраняет: ${safeName}`);
+      appendLog("Папка — из chrome://settings/downloads (у тебя D:\\Downloads1).");
     } catch (err) {
       setStatus("Ошибка");
       appendLog(`Не удалось скачать через браузер: ${err.message}`);
