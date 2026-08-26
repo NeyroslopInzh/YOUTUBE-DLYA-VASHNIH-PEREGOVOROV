@@ -20,15 +20,35 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r src/requirements.txt -r windows/requirements.txt -r windows/requirements-build.txt
+          pip install Pillow
 
-      - name: Build
+      - name: Prepare assets
+        run: |
+          python scripts/sync_extension_manifest.py
+          python scripts/generate_app_icon.py
+          python extension/icons/generate_icons.py
+
+      - name: Build portable exe
         run: python -m PyInstaller windows/app.spec --noconfirm --distpath dist/windows --workpath build/windows
 
-      - name: Upload artifact
+      - name: Install Inno Setup
+        uses: MinionLabs/setup-innosetup@v1
+
+      - name: Compile Inno Setup
+        run: iscc windows/installer.iss
+
+      - name: Upload portable exe
         uses: actions/upload-artifact@v4
         with:
-          name: windows-binary
-          path: dist/windows/
+          name: windows-portable
+          path: |
+            dist/windows/YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL.exe
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/windows/YVPClipper-Setup.exe
 
   build-linux:
     runs-on: ubuntu-latest
@@ -44,12 +64,48 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           pip install -r src/requirements.txt -r linux/requirements.txt -r linux/requirements-build.txt
+          pip install Pillow
 
-      - name: Build
+      - name: Prepare assets
+        run: |
+          python3 scripts/sync_extension_manifest.py
+          python3 extension/icons/generate_icons.py
+
+      - name: Build portable binary
         run: python3 -m PyInstaller linux/app.spec --noconfirm --distpath dist/linux --workpath build/linux
 
-      - name: Upload artifact
+      - name: Build Linux installer tarball
+        run: bash linux/build-installer.sh
+
+      - name: Upload portable binary
         uses: actions/upload-artifact@v4
         with:
-          name: linux-binary
+          name: linux-portable
           path: dist/linux/
+
+      - name: Upload Linux installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-installer
+          path: dist/YVPClipper-linux-installer.tar.gz
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/windows-portable/*
+            artifacts/windows-installer/*
+            artifacts/linux-portable/*
+            artifacts/linux-installer/*
+          generate_release_notes: true

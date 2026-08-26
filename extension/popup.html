@@ -9,11 +9,19 @@
   <body>
     <header>
       <h1>YVP Clipper</h1>
-      <p class="hint">YouTube · нужен companion (yt-dlp локально) · GPL v3</p>
+      <p class="hint">YouTube → desktop app · авто-запуск через yvp://</p>
     </header>
 
     <div id="page-error" class="banner error hidden"></div>
-    <div id="companion-error" class="banner warn hidden"></div>
+    <div id="host-error" class="banner warn hidden"></div>
+    <div id="install-panel" class="banner info hidden">
+      <p id="install-text">Приложение не установлено или не отвечает.</p>
+      <div class="install-actions">
+        <a id="link-releases" class="link-btn" href="#" target="_blank" rel="noopener">Скачать с GitHub</a>
+        <button type="button" id="btn-retry-app" class="secondary">Установил — повторить</button>
+      </div>
+      <p class="install-hint">После скачивания exe запусти <strong>windows\install.bat</strong> — он зарегистрирует yvp:// для расширения.</p>
+    </div>
 
     <form id="clip-form">
       <label>

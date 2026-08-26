@@ -13,13 +13,13 @@ sys.path.insert(0, SRC)
 from app_name import APP_NAME  # noqa: E402
 
 APP_NAME_STR = APP_NAME
+ICON_SRC = os.path.join(ROOT, "extension", "icons", "icon48.png")
 
 EXCLUDES = [
     "matplotlib",
     "numpy",
     "pandas",
     "scipy",
-    "PIL",
     "pytest",
     "setuptools",
     "distutils",
@@ -35,11 +35,14 @@ datas = []
 binaries = []
 hiddenimports = []
 
-for package in ("customtkinter", "yt_dlp"):
+for package in ("customtkinter", "yt_dlp", "pystray"):
     pkg_datas, pkg_binaries, pkg_hidden = collect_all(package)
     datas += pkg_datas
     binaries += pkg_binaries
     hiddenimports += pkg_hidden
+
+if os.path.isfile(ICON_SRC):
+    datas.append((ICON_SRC, "assets"))
 
 a = Analysis(
     [os.path.join(SRC, "main.py")],
@@ -47,7 +50,20 @@ a = Analysis(
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports
-    + ["clipper", "app_log", "settings", "app_name", "paths", "keyboard", "i18n"],
+    + [
+        "clipper",
+        "app_log",
+        "settings",
+        "app_name",
+        "paths",
+        "keyboard",
+        "i18n",
+        "bridge_server",
+        "chrome_downloads",
+        "protocol",
+        "tray",
+        "install_paths",
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

@@ -41,7 +41,8 @@ function getVideoInfo() {
   const title = readVideoTitle();
   return {
     ok: Boolean(video),
-    url: cleanWatchUrl(),
+    url: window.location.href,
+    cleanUrl: cleanWatchUrl(),
     startSeconds: video ? video.currentTime : 0,
     durationSeconds: video && Number.isFinite(video.duration) ? video.duration : null,
     title,

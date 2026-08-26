@@ -14,11 +14,15 @@ import customtkinter as ctk
 
 from app_log import get_log_file, logger, setup_logging
 from app_name import APP_NAME
+from bridge_server import start_bridge_server, stop_bridge_server
 from clipper import ClipRequest, ClipperError, download_clip
 from i18n import LANGUAGES, code_from_label, get_i18n, label_from_code, set_language
 from keyboard import bind_layout_safe_shortcuts, is_layout_safe_ctrl
 from paths import default_output_dir, ensure_output_dir
+from protocol import bridge_already_running, is_protocol_launch
+from install_paths import extension_dir, was_installed_via_setup
 from settings import FormSettings, load_settings, save_settings
+from tray import TrayIcon
 
 
 class ClipperApp(ctk.CTk):
@@ -37,14 +41,37 @@ class ClipperApp(ctk.CTk):
         self._ui_labels: dict[str, ctk.CTkLabel] = {}
         self._entries: dict[str, ctk.CTkEntry] = {}
         self._lang_code = "ru"
+        self._extension_session = is_protocol_launch()
+        self._force_quit = False
+        self._quit_timer: str | None = None
+        self._tray: TrayIcon | None = None
+        self._bridge_jobs_pending = 0
+        self._welcome_dismissed = False
 
         saved = load_settings()
         set_language(saved.language)
         self._lang_code = saved.language
+        self._welcome_dismissed = saved.welcome_dismissed
 
         self._build_ui(saved)
+        self._bridge_port = start_bridge_server(
+            self._bridge_output_dir,
+            on_job_started=lambda: self.after(0, self._track_bridge_job_started),
+            on_job_finished=self._on_bridge_job_finished,
+        )
+        logger().info("Extension bridge http://127.0.0.1:%s", self._bridge_port)
+        if self._extension_session:
+            self._enter_extension_background_mode()
+        elif was_installed_via_setup() and not self._welcome_dismissed:
+            self.after(400, self._show_welcome_dialog)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.after(100, self._poll_log)
+
+    def _bridge_output_dir(self) -> Path:
+        try:
+            return ensure_output_dir(self.dir_var.get())
+        except OSError:
+            return ensure_output_dir(default_output_dir())
 
     def _t(self, key: str, **kwargs: object) -> str:
         return get_i18n().t(key, **kwargs)
@@ -269,12 +296,86 @@ class ClipperApp(ctk.CTk):
             language=self._lang_code,
         )
 
-    def _on_close(self) -> None:
+    def _show_welcome_dialog(self) -> None:
+        if self._welcome_dismissed or self._extension_session:
+            return
+        ext_path = extension_dir()
+        message = (
+            f"{self._t('welcome.body')}\n\n"
+            f"{self._t('welcome.extension_hint')}\n\n"
+            f"{self._t('welcome.extension_path', path=ext_path)}\n\n"
+            f"{self._t('welcome.extension_steps')}"
+        )
+        messagebox.showinfo(self._t("welcome.title"), message, parent=self)
+        self._welcome_dismissed = True
+        try:
+            settings = self._collect_settings()
+            settings.welcome_dismissed = True
+            save_settings(settings)
+        except OSError as exc:
+            logger().error("Settings save failed: %s", exc)
+
+    def _enter_extension_background_mode(self) -> None:
+        self.withdraw()
+        self._tray = TrayIcon(
+            title=APP_NAME,
+            on_show=lambda: self.after(0, self._show_window),
+            on_quit=lambda: self.after(0, self._quit_app),
+        )
+        if not self._tray.start():
+            logger().warning("Tray icon unavailable — running hidden without tray")
+        logger().info("Extension session: background mode (tray)")
+
+    def _show_window(self) -> None:
+        self.deiconify()
+        self.lift()
+        self.focus_force()
+
+    def _on_bridge_job_finished(self, job_id: str, success: bool) -> None:
+        def handle() -> None:
+            self._bridge_jobs_pending = max(0, self._bridge_jobs_pending - 1)
+            logger().info("Bridge job %s finished success=%s pending=%s", job_id, success, self._bridge_jobs_pending)
+            if (
+                self._extension_session
+                and success
+                and self._bridge_jobs_pending == 0
+                and not (self._worker and self._worker.is_alive())
+            ):
+                self._schedule_extension_quit()
+
+        self.after(0, handle)
+
+    def _track_bridge_job_started(self) -> None:
+        self._bridge_jobs_pending += 1
+        if self._quit_timer is not None:
+            self.after_cancel(self._quit_timer)
+            self._quit_timer = None
+
+    def _schedule_extension_quit(self) -> None:
+        if self._quit_timer is not None:
+            self.after_cancel(self._quit_timer)
+        self._quit_timer = self.after(2500, self._quit_app)
+
+    def _quit_app(self) -> None:
+        self._force_quit = True
+        if self._quit_timer is not None:
+            self.after_cancel(self._quit_timer)
+            self._quit_timer = None
+        if self._tray is not None:
+            self._tray.stop()
+            self._tray = None
+        stop_bridge_server()
         try:
             save_settings(self._collect_settings())
         except OSError as exc:
             logger().error("Settings save failed: %s", exc)
         self.destroy()
+
+    def _on_close(self) -> None:
+        if self._extension_session and not self._force_quit:
+            self.withdraw()
+            return
+        self._quit_app()
 
     def _append_log(self, text: str) -> None:
         self.log_box.insert("end", text + "\n")
@@ -357,6 +458,9 @@ class ClipperApp(ctk.CTk):
 
 def main() -> None:
     setup_logging()
+    if is_protocol_launch() and bridge_already_running():
+        logger().info("Protocol launch ignored — app already running")
+        return
     app = ClipperApp()
     app.mainloop()
 

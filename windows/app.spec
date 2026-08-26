@@ -19,7 +19,6 @@ EXCLUDES = [
     "numpy",
     "pandas",
     "scipy",
-    "PIL",
     "pytest",
     "setuptools",
     "distutils",
@@ -30,15 +29,21 @@ EXCLUDES = [
     "tkinter.test",
 ]
 
+ICON_SRC = os.path.join(ROOT, "extension", "icons", "icon48.png")
+APP_ICON = os.path.join(ROOT, "assets", "app.ico")
+
 datas = []
 binaries = []
 hiddenimports = []
 
-for package in ("customtkinter", "yt_dlp", "imageio_ffmpeg"):
+for package in ("customtkinter", "yt_dlp", "imageio_ffmpeg", "pystray"):
     pkg_datas, pkg_binaries, pkg_hidden = collect_all(package)
     datas += pkg_datas
     binaries += pkg_binaries
     hiddenimports += pkg_hidden
+
+if os.path.isfile(ICON_SRC):
+    datas.append((ICON_SRC, "assets"))
 
 a = Analysis(
     [os.path.join(SRC, "main.py")],
@@ -46,10 +51,10 @@ a = Analysis(
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports
-    + ["clipper", "app_log", "settings", "app_name", "paths", "keyboard", "i18n"],
+    + ["clipper", "app_log", "settings", "app_name", "paths", "keyboard", "i18n", "bridge_server", "chrome_downloads", "protocol", "tray", "install_paths"],
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=[os.path.join(SPEC_DIR, "runtime_ffmpeg.py")],
     excludes=EXCLUDES,
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -79,4 +84,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=APP_ICON if os.path.isfile(APP_ICON) else None,
 )

@@ -22,6 +22,7 @@ class FormSettings:
     title: str = ""
     output_dir: str = ""
     language: str = DEFAULT_LANG
+    welcome_dismissed: bool = False
 
 
 def load_settings(default_output_dir_str: str | None = None) -> FormSettings:
@@ -41,6 +42,7 @@ def load_settings(default_output_dir_str: str | None = None) -> FormSettings:
             title=str(raw.get("title", "")),
             output_dir=normalize_saved_output_dir(saved_dir, default_path),
             language=str(raw.get("language") or DEFAULT_LANG),
+            welcome_dismissed=bool(raw.get("welcome_dismissed", False)),
         )
     except (OSError, json.JSONDecodeError, TypeError, ValueError):
         return FormSettings(output_dir=default_str)

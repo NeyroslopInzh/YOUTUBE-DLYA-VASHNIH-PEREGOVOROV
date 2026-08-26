@@ -4,69 +4,62 @@
 
 **Лицензия:** [GNU GPL v3](LICENSE) — copyleft, форки только под GPL.
 
+Desktop app + опциональное **Chromium-расширение** (Chrome, Opera, Edge) — Load unpacked, без магазинов.
+
 ## Структура репозитория
 
 ```
 ├── src/              # общий Python-код (Windows + Linux)
-├── windows/          # запуск и сборка под Windows
-├── linux/            # запуск, сборка, PKGBUILD для Arch
-├── docs/             # подробная инструкция
+├── extension/        # Chromium extension (Load unpacked)
+├── windows/          # exe, Inno Setup installer
+├── linux/            # binary, install.sh (все дистри)
+├── docs/             # инструкции (5 языков)
 └── LICENSE
 ```
 
-Бинарники **не лежат в git** — только в [Releases](https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV/releases).
+Бинарники — в [Releases](https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV/releases).
 
 ---
 
-## Быстрая установка — Windows
+## Что скачать
 
-### Вариант A: готовый EXE (рекомендуется)
+| Нужно | Windows | Linux |
+|-------|---------|-------|
+| **Только app** | portable `.exe` | portable binary |
+| **App + расширение** | `YVPClipper-Setup.exe` | `YVPClipper-linux-installer.tar.gz` |
 
-**PowerShell** — скачать последний релиз:
+После **установщика**: запусти app один раз — покажет путь к папке `extension` для Load unpacked (на языке интерфейса).
 
-```powershell
-gh release download --repo NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV --pattern "*.exe" --dir .
-```
+Расширение **не ставится автоматически** — Chrome/Opera не дают. Только вручную: режим разработчика → Load unpacked → папка из подсказки.
 
-Без `gh` — открой [Releases](https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV/releases), скачай `.exe`, двойной клик.
+---
 
-### Вариант B: из исходников
+## Windows
+
+### Только app (portable)
+
+[Releases](https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV/releases) → скачай `.exe` (длинное имя, без Setup) → двойной клик.
+
+### App + расширение
+
+1. `YVPClipper-Setup.exe` → установка (`yvp://`, папка extension)
+2. Запусти app → прочитай подсказку про расширение
+3. `chrome://extensions` или `opera://extensions` → Load unpacked → папка из подсказки
+
+### Из исходников
 
 ```bat
-git clone https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV.git
-cd YOUTUBE-DLYA-VASHNIH-PEREGOVOROV
-git checkout standalone-app
 windows\run.bat
+windows\build-installer.bat   REM exe + Setup (нужен Inno Setup)
 ```
-
-### Вариант C: собрать EXE самому
-
-```bat
-git clone https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV.git
-cd YOUTUBE-DLYA-VASHNIH-PEREGOVOROV
-windows\build.bat
-```
-
-Результат: `dist\windows\`
 
 ---
 
-## Быстрая установка — Linux
+## Linux
 
-**Зависимость:** `ffmpeg` обязателен на всех дистрибутивах.
+**Зависимость:** `ffmpeg` в PATH.
 
-```bash
-# Arch
-sudo pacman -S ffmpeg
-
-# Debian / Ubuntu
-sudo apt install ffmpeg python3-tk
-
-# Fedora
-sudo dnf install ffmpeg python3-tkinter
-```
-
-### Вариант A: готовый бинарник из Releases
+### Только app (portable)
 
 ```bash
 gh release download --repo NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV --pattern "*" --dir .
@@ -74,49 +67,33 @@ chmod +x YOUTUBE\ VIDEOS\ DOWNLOAD\ FOR\ VASHNIE\ PEREGOVORI\ 2002\ KRUTO\ COOL\
 ./YOUTUBE\ VIDEOS\ DOWNLOAD\ FOR\ VASHNIE\ PEREGOVORI\ 2002\ KRUTO\ COOL\ SOSAL
 ```
 
-### Вариант B: из исходников
+### App + расширение
 
 ```bash
-git clone https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV.git
-cd YOUTUBE-DLYA-VASHNIH-PEREGOVOROV
-git checkout standalone-app
-chmod +x linux/run.sh
-./linux/run.sh
+tar xzf YVPClipper-linux-installer.tar.gz
+./install.sh
+yvp-clipper   # или yvp://start
 ```
 
-### Вариант C: собрать бинарник самому
+Дальше — Load unpacked, как на Windows.
+
+### Из исходников
 
 ```bash
-git clone https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV.git
-cd YOUTUBE-DLYA-VASHNIH-PEREGOVOROV
-chmod +x linux/build.sh
-./linux/build.sh
-```
-
-Результат: `dist/linux/`
-
-### Вариант D: Arch — PKGBUILD
-
-```bash
-git clone https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV.git
-cd YOUTUBE-DLYA-VASHNIH-PEREGOVOROV/linux/packaging/arch
-makepkg -sf
-sudo pacman -U yvp-vashnie-peregovori-*.pkg.tar.zst
-yvp-vashnie-peregovori
+chmod +x linux/run.sh linux/build-installer.sh
+./linux/build-installer.sh
 ```
 
 ---
 
 ## Возможности
 
-- Ссылка + время начала/конца + имя файла + папка
-- **Языки интерфейса:** Русский, English, עברית, हिन्दी, Oʻzbekcha — выбор в выпадающем списке «Язык», сохраняется в `settings.json`
-- Автосохранение полей (`settings.json` рядом с exe/бинарником)
-- Логи: `logs/clipper.log`
-- Русская раскладка: Ctrl+C/V/A работают на Windows
-- Папка по умолчанию: `~/Видео/YouTubeClips` или `~/Videos/YouTubeClips`
+- Desktop GUI или расширение на YouTube (через bridge `127.0.0.1:8766`)
+- `yvp://` — авто-запуск app из расширения, трей, закрытие после клипа
+- **Языки:** Русский, English, עברית, हिन्दी, Oʻzbekcha
+- Иконка — флаг Узбекистана 🇺🇿
 
-## Документация на других языках
+## Документация
 
 | Язык | README | Инструкция |
 |------|--------|------------|
@@ -126,10 +103,8 @@ yvp-vashnie-peregovori
 | हिन्दी | [docs/README.hi.md](docs/README.hi.md) | [docs/INSTRUCTIONS.hi.md](docs/INSTRUCTIONS.hi.md) |
 | Oʻzbekcha | [docs/README.uz.md](docs/README.uz.md) | [docs/INSTRUCTIONS.uz.md](docs/INSTRUCTIONS.uz.md) |
 
-## Подробнее
-
-[docs/INSTRUCTIONS.md](docs/INSTRUCTIONS.md)
+Расширение: [extension/README.md](extension/README.md)
 
 ## Стек
 
-Python · CustomTkinter · yt-dlp · ffmpeg
+Python · CustomTkinter · yt-dlp · ffmpeg · Chromium MV3

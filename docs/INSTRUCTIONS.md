@@ -5,58 +5,56 @@
 | Папка | Назначение |
 |-------|------------|
 | `src/` | Общий код приложения |
-| `windows/` | `run.bat`, `build.bat`, PyInstaller spec |
-| `linux/` | `run.sh`, `build.sh`, PyInstaller spec, PKGBUILD |
+| `extension/` | Chromium-расширение (Load unpacked) |
+| `windows/` | portable exe, Inno Setup (`YVPClipper-Setup.exe`) |
+| `linux/` | portable binary, `install.sh` (все дистри) |
 | `docs/` | Документация |
 
 ---
 
 ## Windows
 
-### Готовый EXE
-Скачай из [Releases](https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV/releases) → двойной клик.
+### Только app
+Portable `.exe` из [Releases](https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV/releases) (файл без «Setup» в имени).
 
-### Исходники
+### App + расширение
+1. `YVPClipper-Setup.exe`
+2. Запусти app — диалог с путём к папке extension
+3. Браузер → режим разработчика → Load unpacked
+
+### Исходники / сборка
 ```bat
 windows\run.bat
+windows\build-installer.bat
 ```
-
-### Сборка EXE
-```bat
-windows\build.bat
-```
-→ `dist\windows\`
 
 ---
 
 ## Linux
 
 ### Требования
-- Python 3.10+
 - `ffmpeg` в PATH
-- `python3-tk` / `tk`
 
-### Исходники
+### Только app
+Portable binary из Releases.
+
+### App + расширение
 ```bash
-chmod +x linux/run.sh
-./linux/run.sh
+tar xzf YVPClipper-linux-installer.tar.gz
+./install.sh
 ```
 
-### Сборка бинарника
+### Исходники / сборка
 ```bash
-chmod +x linux/build.sh
-./linux/build.sh
+chmod +x linux/run.sh linux/build-installer.sh
+./linux/build-installer.sh
 ```
-→ `dist/linux/`
 
-Бинарник собран под glibc (Ubuntu CI) — работает на Arch, Debian, Fedora и др.
+---
 
-### Arch PKGBUILD
-```bash
-cd linux/packaging/arch
-makepkg -sf
-sudo pacman -U yvp-vashnie-peregovori-*.pkg.tar.zst
-```
+## Расширение
+
+[extension/README.md](../extension/README.md) — Load unpacked, без Chrome Web Store.
 
 ---
 
