@@ -5,9 +5,12 @@
 ## Если бинарник уже лежит здесь
 
 ```bash
+sudo pacman -S ffmpeg
 chmod +x "YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL"
 ./YOUTUBE\ VIDEOS\ DOWNLOAD\ FOR\ VASHNIE\ PEREGOVORI\ 2002\ KRUTO\ COOL\ SOSAL
 ```
+
+> **ffmpeg обязателен.** Без системного ffmpeg возможен `ffmpeg exited with code -11` (segfault bundled-бинарника).
 
 ## Сборка на Arch вручную
 

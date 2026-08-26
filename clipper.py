@@ -92,8 +92,28 @@ def sanitize_filename(name: str) -> str:
     return cleaned
 
 
+def _resolve_ffmpeg() -> str:
+    """На Linux bundled ffmpeg из imageio часто падает с SIGSEGV — берём системный."""
+    system = shutil.which("ffmpeg")
+    if sys.platform != "win32":
+        if system:
+            return system
+        raise ClipperError(
+            "ffmpeg не найден в PATH. На Arch: sudo pacman -S ffmpeg"
+        )
+    if system:
+        return system
+    return imageio_ffmpeg.get_ffmpeg_exe()
+
+
 def _friendly_error(output: str, code: int) -> str:
     text = output.lower()
+    if "ffmpeg exited with code -11" in text or "code -11" in text:
+        return (
+            "ffmpeg упал с segfault (код -11). "
+            "На Linux поставь системный ffmpeg и перезапусти приложение: "
+            "sudo pacman -S ffmpeg"
+        )
     if "winerror 10054" in text or "forcibly closed" in text:
         return (
             "YouTube оборвал соединение (WinError 10054). "
@@ -163,7 +183,10 @@ def _run_ytdlp(cmd: list[str], on_log: Callable[[str], None]) -> tuple[int, str]
 
 
 def build_output_path(output_dir: Path, title: str) -> Path:
-    output_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise ClipperError(f"Не удалось создать папку сохранения: {output_dir}\n{exc}") from exc
     filename = sanitize_filename(title)
     if not filename.lower().endswith(".mp4"):
         filename += ".mp4"
@@ -200,7 +223,7 @@ def download_clip(
         log.error("Файл уже существует: %s", output_path)
         raise ClipperError(f"Файл уже существует: {output_path}")
 
-    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    ffmpeg = _resolve_ffmpeg()
     section = f"*{start}-{end}"
     cmd = _build_ytdlp_cmd(ffmpeg, section, output_path, url)
 

@@ -135,7 +135,15 @@ YouTube оборвал соединение. Попробуй:
 ### Файл уже существует
 Переименуй клип или удали старый MP4 в папке сохранения.
 
-### На Linux не открывается окно
+### ffmpeg exited with code -11 (Linux)
+Bundled ffmpeg в exe на Linux может падать. Поставь системный:
+
+```bash
+sudo pacman -S ffmpeg
+```
+
+После этого перезапусти приложение — будет использован `/usr/bin/ffmpeg`.
+
 Нужен Tk:
 ```bash
 # Ubuntu/Debian

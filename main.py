@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import queue
 import subprocess
+import sys
 import threading
 import tkinter as tk
 from pathlib import Path
@@ -14,9 +15,8 @@ import customtkinter as ctk
 from app_log import get_log_file, logger, setup_logging
 from app_name import APP_NAME
 from clipper import ClipRequest, ClipperError, download_clip
+from paths import default_output_dir, ensure_output_dir
 from settings import FormSettings, load_settings, save_settings
-
-DEFAULT_OUTPUT = Path.home() / "Videos" / "YouTubeClips"
 
 
 class ClipperApp(ctk.CTk):
@@ -33,7 +33,7 @@ class ClipperApp(ctk.CTk):
         self._log_queue: queue.Queue[str | tuple[str, str]] = queue.Queue()
         self._worker: threading.Thread | None = None
 
-        saved = load_settings(str(DEFAULT_OUTPUT))
+        saved = load_settings()
 
         self._build_ui(saved)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -65,7 +65,7 @@ class ClipperApp(ctk.CTk):
         self.start_var = tk.StringVar(value=saved.start)
         self.end_var = tk.StringVar(value=saved.end)
         self.title_var = tk.StringVar(value=saved.title)
-        self.dir_var = tk.StringVar(value=saved.output_dir or str(DEFAULT_OUTPUT))
+        self.dir_var = tk.StringVar(value=saved.output_dir or str(default_output_dir()))
 
         self._row(form, "Ссылка YouTube", self.url_var, placeholder="https://www.youtube.com/watch?v=...")
         self._row(form, "Начало отрезка", self.start_var, placeholder="1:30 или 90")
@@ -92,6 +92,13 @@ class ClipperApp(ctk.CTk):
 
         ctk.CTkButton(
             btn_row,
+            text="Копировать лог",
+            width=110,
+            command=self._copy_log,
+        ).pack(side="left", padx=(8, 0))
+
+        ctk.CTkButton(
+            btn_row,
             text="Логи",
             width=70,
             command=self._open_logs,
@@ -105,8 +112,73 @@ class ClipperApp(ctk.CTk):
 
         ctk.CTkLabel(log_frame, text="Лог", anchor="w").pack(fill="x", padx=12, pady=(8, 4))
 
-        self.log_box = ctk.CTkTextbox(log_frame, state="disabled", font=ctk.CTkFont(family="Consolas", size=12))
+        self.log_box = ctk.CTkTextbox(log_frame, font=ctk.CTkFont(family="Consolas", size=12))
         self.log_box.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        self._setup_log_interactions()
+
+    def _setup_log_interactions(self) -> None:
+        text = self.log_box._textbox
+        text.configure(exportselection=True)
+
+        self._log_menu = tk.Menu(self, tearoff=0)
+        self._log_menu.add_command(label="Копировать", command=self._copy_log)
+        self._log_menu.add_command(label="Выделить всё", command=self._select_all_log)
+
+        text.bind("<Key>", self._on_log_key)
+        text.bind("<Control-a>", self._select_all_log)
+        text.bind("<Control-A>", self._select_all_log)
+        text.bind("<Control-c>", lambda _e: None)
+        text.bind("<Control-C>", lambda _e: None)
+        text.bind("<Button-3>", self._show_log_menu)
+
+    def _on_log_key(self, event: tk.Event) -> str | None:
+        if event.state & 0x4:
+            if event.keysym.lower() in {"c", "a", "insert"}:
+                return None
+        if event.keysym in {
+            "Shift_L",
+            "Shift_R",
+            "Control_L",
+            "Control_R",
+            "Alt_L",
+            "Alt_R",
+            "Left",
+            "Right",
+            "Up",
+            "Down",
+            "Home",
+            "End",
+            "Prior",
+            "Next",
+            "Tab",
+        }:
+            return None
+        return "break"
+
+    def _show_log_menu(self, event: tk.Event) -> None:
+        try:
+            self._log_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self._log_menu.grab_release()
+
+    def _select_all_log(self, _event: tk.Event | None = None) -> None:
+        text = self.log_box._textbox
+        text.tag_add("sel", "1.0", "end-1c")
+        text.mark_set("insert", "end-1c")
+        text.see("insert")
+        return "break"
+
+    def _copy_log(self) -> None:
+        text = self.log_box._textbox
+        try:
+            selection = text.get("sel.first", "sel.last")
+        except tk.TclError:
+            selection = text.get("1.0", "end-1c")
+        if not selection.strip():
+            return
+        self.clipboard_clear()
+        self.clipboard_append(selection)
+        self.update()
 
     def _row(
         self,
@@ -123,16 +195,23 @@ class ClipperApp(ctk.CTk):
         )
 
     def _pick_dir(self) -> None:
-        path = filedialog.askdirectory(initialdir=self.dir_var.get() or str(Path.home()))
+        current = self.dir_var.get().strip()
+        initial = current if current and Path(current).expanduser().is_dir() else str(default_output_dir().parent)
+        path = filedialog.askdirectory(initialdir=initial)
         if path:
-            self.dir_var.set(path)
+            self.dir_var.set(str(ensure_output_dir(path)))
 
     def _open_logs(self) -> None:
         log_file = get_log_file()
         log_file.parent.mkdir(parents=True, exist_ok=True)
         if not log_file.exists():
             log_file.touch()
-        subprocess.Popen(["explorer", "/select,", str(log_file)])
+        if sys.platform == "win32":
+            subprocess.Popen(["explorer", "/select,", str(log_file)])
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", "-R", str(log_file)])
+        else:
+            subprocess.Popen(["xdg-open", str(log_file.parent)])
 
     def _collect_settings(self) -> FormSettings:
         return FormSettings(
@@ -152,10 +231,8 @@ class ClipperApp(ctk.CTk):
         self.destroy()
 
     def _append_log(self, text: str) -> None:
-        self.log_box.configure(state="normal")
         self.log_box.insert("end", text + "\n")
         self.log_box.see("end")
-        self.log_box.configure(state="disabled")
 
     def _poll_log(self) -> None:
         while True:
@@ -191,12 +268,20 @@ class ClipperApp(ctk.CTk):
         self._set_busy(True)
         self._log_queue.put(("status", "Загрузка…"))
 
+        try:
+            output_dir = ensure_output_dir(self.dir_var.get())
+            self.dir_var.set(str(output_dir))
+        except OSError as exc:
+            self._set_busy(False)
+            messagebox.showerror(APP_NAME, f"Не удалось создать папку сохранения:\n{exc}")
+            return
+
         request = ClipRequest(
             url=self.url_var.get(),
             start=self.start_var.get(),
             end=self.end_var.get(),
             title=self.title_var.get(),
-            output_dir=Path(self.dir_var.get()),
+            output_dir=output_dir,
         )
 
         def worker() -> None:
