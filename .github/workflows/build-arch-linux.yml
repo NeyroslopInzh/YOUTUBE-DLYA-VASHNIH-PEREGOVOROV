@@ -19,11 +19,15 @@ jobs:
 
       - name: Install Python dependencies
         run: |
+          python -m venv .venv
+          . .venv/bin/activate
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt -r requirements-build.txt
 
       - name: Build binary
-        run: python -m PyInstaller app.spec --noconfirm
+        run: |
+          . .venv/bin/activate
+          python -m PyInstaller app.spec --noconfirm
 
       - name: Stage release artifact
         run: |
