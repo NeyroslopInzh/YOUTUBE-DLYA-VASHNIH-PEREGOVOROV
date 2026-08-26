@@ -294,6 +294,7 @@ class ClipperApp(ctk.CTk):
             title=self.title_var.get().strip(),
             output_dir=self.dir_var.get().strip(),
             language=self._lang_code,
+            welcome_dismissed=self._welcome_dismissed,
         )
 
     def _show_welcome_dialog(self) -> None:
