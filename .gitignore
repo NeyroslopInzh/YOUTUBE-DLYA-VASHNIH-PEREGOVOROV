@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# PyInstaller
+build/
+dist/
+
+# Локальные данные пользователя
+logs/
+settings.json
+videos download/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
