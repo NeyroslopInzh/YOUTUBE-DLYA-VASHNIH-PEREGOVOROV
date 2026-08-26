@@ -32,10 +32,10 @@ jobs:
         run: python -m PyInstaller windows/app.spec --noconfirm --distpath dist/windows --workpath build/windows
 
       - name: Install Inno Setup
-        uses: MinionLabs/setup-innosetup@v1
+        run: choco install innosetup -y --no-progress
 
       - name: Compile Inno Setup
-        run: iscc windows/installer.iss
+        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" windows\installer.iss'
 
       - name: Upload portable exe
         uses: actions/upload-artifact@v4
@@ -58,7 +58,7 @@ jobs:
       - name: Install system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3 python3-pip python3-tk python3-venv ffmpeg
+          sudo apt-get install -y python3 python3-pip python3-tk python3-venv ffmpeg rsync
 
       - name: Install Python dependencies
         run: |

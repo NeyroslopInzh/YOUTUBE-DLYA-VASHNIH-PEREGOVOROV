@@ -3,8 +3,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-py scripts/sync_extension_manifest.py
-py scripts/generate_app_icon.py 2>/dev/null || true
+PYTHON="${PYTHON:-python3}"
+"$PYTHON" scripts/sync_extension_manifest.py
+"$PYTHON" scripts/generate_app_icon.py 2>/dev/null || true
 bash linux/build.sh
 
 STAGE="$ROOT/dist/linux-installer"
