@@ -80,6 +80,14 @@ def _time_to_seconds(value: str) -> int:
     return h * 3600 + m * 60 + s
 
 
+def _build_download_ranges(start: str, end: str):
+    from yt_dlp.utils import download_range_func
+
+    start_sec = float(_time_to_seconds(start))
+    end_sec = float(_time_to_seconds(end))
+    return download_range_func([], [(start_sec, end_sec)])
+
+
 def sanitize_filename(name: str) -> str:
     cleaned = re.sub(r'[<>:"/\\|?*]', "_", name.strip())
     cleaned = re.sub(r"\s+", " ", cleaned).strip(" .")
@@ -119,9 +127,9 @@ def _friendly_error(output: str, code: int) -> str:
     return _t("err.ytdlp_code", code=code, tail=tail)
 
 
-def _ytdlp_options(ffmpeg: str, section: str, output_path: Path) -> dict[str, Any]:
+def _ytdlp_options(ffmpeg: str, start: str, end: str, output_path: Path) -> dict[str, Any]:
     return {
-        "download_sections": [section],
+        "download_ranges": _build_download_ranges(start, end),
         "force_keyframes_at_cuts": True,
         "extractor_args": {"youtube": {"player_client": ["android", "tv", "web"]}},
         "remote_components": ["ejs:github"],
@@ -238,7 +246,8 @@ def _run_ytdlp_subprocess(cmd: list[str], on_log: Callable[[str], None]) -> tupl
 
 def _run_ytdlp_inprocess(
     ffmpeg: str,
-    section: str,
+    start: str,
+    end: str,
     output_path: Path,
     url: str,
     on_log: Callable[[str], None],
@@ -246,7 +255,7 @@ def _run_ytdlp_inprocess(
     import yt_dlp
 
     bridge = _YtdlpLogBridge(on_log)
-    opts = _ytdlp_options(ffmpeg, section, output_path)
+    opts = _ytdlp_options(ffmpeg, start, end, output_path)
     opts["logger"] = bridge
 
     try:
@@ -265,13 +274,15 @@ def _run_ytdlp_inprocess(
 
 def _run_ytdlp(
     ffmpeg: str,
+    start: str,
+    end: str,
     section: str,
     output_path: Path,
     url: str,
     on_log: Callable[[str], None],
 ) -> tuple[int, str]:
     if _use_inprocess_ytdlp():
-        return _run_ytdlp_inprocess(ffmpeg, section, output_path, url, on_log)
+        return _run_ytdlp_inprocess(ffmpeg, start, end, output_path, url, on_log)
     cmd = _build_ytdlp_cmd(ffmpeg, section, output_path, url)
     return _run_ytdlp_subprocess(cmd, on_log)
 
@@ -332,7 +343,7 @@ def download_clip(
             ui_log(_t("clip.retry", attempt=attempt, total=max_attempts, wait=wait_s))
             time.sleep(wait_s)
 
-        code, last_output = _run_ytdlp(ffmpeg, section, output_path, url, ui_log)
+        code, last_output = _run_ytdlp(ffmpeg, start, end, section, output_path, url, ui_log)
         if code == 0:
             break
 
