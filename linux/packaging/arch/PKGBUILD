@@ -1,0 +1,55 @@
+pkgname=yvp-vashnie-peregovori
+pkgver=2.0.0
+pkgrel=1
+pkgdesc="YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL — вырезка отрезков YouTube в MP4"
+url="https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV"
+arch=('x86_64')
+license=('GPL-3.0-or-later')
+depends=(
+  'glibc'
+  'zlib'
+  'bzip2'
+  'xz'
+  'zstd'
+  'gcc-libs'
+  'tk'
+  'ffmpeg'
+)
+makedepends=(
+  'python'
+  'python-pip'
+  'python-setuptools'
+  'python-wheel'
+  'rsync'
+)
+options=('!strip')
+source=()
+
+_app_name="YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL"
+_project_root="$startdir/../../.."
+
+prepare() {
+  rm -rf "$srcdir/buildroot"
+  mkdir -p "$srcdir/buildroot/src" "$srcdir/buildroot/linux"
+
+  rsync -a "$_project_root/src/" "$srcdir/buildroot/src/"
+  rsync -a "$_project_root/linux/" "$srcdir/buildroot/linux/"
+}
+
+build() {
+  cd "$srcdir/buildroot"
+  python -m venv .build-venv
+  source .build-venv/bin/activate
+  python -m pip install --upgrade pip
+  python -m pip install -r src/requirements.txt -r linux/requirements.txt -r linux/requirements-build.txt
+  python -m PyInstaller linux/app.spec --noconfirm --distpath dist/linux --workpath build/linux
+}
+
+package() {
+  install -dm755 "$pkgdir/usr/bin"
+  install -dm755 "$pkgdir/usr/share/applications"
+
+  install -Dm755 "$srcdir/buildroot/dist/linux/${_app_name}" "$pkgdir/usr/bin/${pkgname}"
+  install -Dm644 "$startdir/${pkgname}.desktop" \
+    "$pkgdir/usr/share/applications/${pkgname}.desktop"
+}

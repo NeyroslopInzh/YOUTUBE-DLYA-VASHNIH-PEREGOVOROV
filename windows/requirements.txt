@@ -1,0 +1,2 @@
+-r ../src/requirements.txt
+imageio-ffmpeg>=0.5.0

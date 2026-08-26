@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL
+GenericName=YouTube segment clipper
+Comment=Вырезка отрезков с YouTube в MP4
+Exec=yvp-vashnie-peregovori
+Terminal=false
+Categories=AudioVideo;Video;Utility;
+StartupWMClass=yvp-vashnie-peregovori

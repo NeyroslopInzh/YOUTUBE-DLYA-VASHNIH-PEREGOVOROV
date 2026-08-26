@@ -1,18 +1,28 @@
-# Python
+# Python / build
 __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
 venv/
+.build-venv/
 
 # PyInstaller
 build/
 dist/
+_artifact_tmp/
 
-# Локальные данные пользователя
+# Локальные данные
 logs/
 settings.json
 videos download/
+
+# Бинарники не храним в git — только в Releases
+*.exe
+
+# Arch makepkg
+linux/packaging/arch/pkg/
+linux/packaging/arch/src/
+linux/packaging/arch/*.pkg.tar.*
 
 # OS / IDE
 .DS_Store

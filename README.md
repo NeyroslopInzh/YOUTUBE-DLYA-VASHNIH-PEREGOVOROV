@@ -1,51 +1,124 @@
 # YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL
 
-Десктопная программа для вырезки отрезков с YouTube в MP4.
+Вырезка отрезков с YouTube в MP4. Качается **только нужный кусок**, не весь ролик.
 
-**Ветка:** `standalone-app` — автономное приложение с GUI.  
-*(Git не поддерживает пробелы в имени ветки; задумывалась как `standalone app`.)*
+**Лицензия:** [GNU GPL v3](LICENSE) — copyleft, форки только под GPL.
 
-## Быстрый старт
+## Структура репозитория
 
-| Способ | Файл | Описание |
-|--------|------|----------|
-| **1. Готовый EXE** | `release/windows/YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL.exe` | Двойной клик, без Python и консоли |
-| **2. CMD / BAT** | `run.bat` | Запуск из исходников через Python |
-| **3. Сборка Windows** | `build_windows.bat` | Компиляция exe из Python-кода |
-| **4. Сборка Linux** | `build_linux.sh` | Бинарник для Linux (сборка на Linux) |
+```
+├── src/              # общий Python-код (Windows + Linux)
+├── windows/          # запуск и сборка под Windows
+├── linux/            # запуск, сборка, PKGBUILD для Arch
+├── docs/             # подробная инструкция
+└── LICENSE
+```
 
-Полная инструкция: **[INSTRUCTIONS.md](INSTRUCTIONS.md)**
+Бинарники **не лежат в git** — только в [Releases](https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV/releases).
+
+---
+
+## Быстрая установка — Windows
+
+### Вариант A: готовый EXE (рекомендуется)
+
+**PowerShell** — скачать последний релиз:
+
+```powershell
+gh release download --repo NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV --pattern "*.exe" --dir .
+```
+
+Без `gh` — открой [Releases](https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV/releases), скачай `.exe`, двойной клик.
+
+### Вариант B: из исходников
+
+```bat
+git clone https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV.git
+cd YOUTUBE-DLYA-VASHNIH-PEREGOVOROV
+git checkout standalone-app
+windows\run.bat
+```
+
+### Вариант C: собрать EXE самому
+
+```bat
+git clone https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV.git
+cd YOUTUBE-DLYA-VASHNIH-PEREGOVOROV
+windows\build.bat
+```
+
+Результат: `dist\windows\`
+
+---
+
+## Быстрая установка — Linux
+
+**Зависимость:** `ffmpeg` обязателен на всех дистрибутивах.
+
+```bash
+# Arch
+sudo pacman -S ffmpeg
+
+# Debian / Ubuntu
+sudo apt install ffmpeg python3-tk
+
+# Fedora
+sudo dnf install ffmpeg python3-tkinter
+```
+
+### Вариант A: готовый бинарник из Releases
+
+```bash
+gh release download --repo NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV --pattern "*" --dir .
+chmod +x YOUTUBE\ VIDEOS\ DOWNLOAD\ FOR\ VASHNIE\ PEREGOVORI\ 2002\ KRUTO\ COOL\ SOSAL
+./YOUTUBE\ VIDEOS\ DOWNLOAD\ FOR\ VASHNIE\ PEREGOVORI\ 2002\ KRUTO\ COOL\ SOSAL
+```
+
+### Вариант B: из исходников
+
+```bash
+git clone https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV.git
+cd YOUTUBE-DLYA-VASHNIH-PEREGOVOROV
+git checkout standalone-app
+chmod +x linux/run.sh
+./linux/run.sh
+```
+
+### Вариант C: собрать бинарник самому
+
+```bash
+git clone https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV.git
+cd YOUTUBE-DLYA-VASHNIH-PEREGOVOROV
+chmod +x linux/build.sh
+./linux/build.sh
+```
+
+Результат: `dist/linux/`
+
+### Вариант D: Arch — PKGBUILD
+
+```bash
+git clone https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV.git
+cd YOUTUBE-DLYA-VASHNIH-PEREGOVOROV/linux/packaging/arch
+makepkg -sf
+sudo pacman -U yvp-vashnie-peregovori-*.pkg.tar.zst
+yvp-vashnie-peregovori
+```
+
+---
 
 ## Возможности
 
-- Ссылка на YouTube + время начала/конца + имя файла + папка сохранения
-- Качается **только нужный отрезок**, не весь ролик
-- Автосохранение полей при выходе (`settings.json`)
-- Логи в `logs/clipper.log`
+- Ссылка + время начала/конца + имя файла + папка
+- Автосохранение полей (`settings.json` рядом с exe/бинарником)
+- Логи: `logs/clipper.log`
+- Русская раскладка: Ctrl+C/V/A работают на Windows
+- Папка по умолчанию: `~/Видео/YouTubeClips` или `~/Videos/YouTubeClips`
+
+## Подробнее
+
+[docs/INSTRUCTIONS.md](docs/INSTRUCTIONS.md)
 
 ## Стек
 
-Python · CustomTkinter · yt-dlp · ffmpeg (imageio-ffmpeg)
-
-## Скачать готовый EXE
-
-```
-release/windows/YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL.exe
-```
-
-## Разработка
-
-```bat
-py -m pip install -r requirements.txt
-py main.py
-```
-
-## Лицензия
-
-**GNU GPL v3** — свободное использование с копилефтом.
-
-- Можно использовать, изучать, менять и распространять
-- Производные работы тоже только под **GPL** — переиздавать под проприетарной лицензией нельзя
-- При распространении нужно сохранять исходники и ту же лицензию
-
-Полный текст: [LICENSE](LICENSE)
+Python · CustomTkinter · yt-dlp · ffmpeg
