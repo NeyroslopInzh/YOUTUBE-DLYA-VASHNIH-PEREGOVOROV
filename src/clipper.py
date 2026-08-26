@@ -9,7 +9,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from app_log import logger as app_logger
 from i18n import get_i18n, set_language
@@ -41,28 +41,15 @@ def _is_frozen() -> bool:
     return bool(getattr(sys, "frozen", False))
 
 
-def _find_ytdlp() -> str:
-    # PyInstaller bundle ships yt_dlp; system yt-dlp inherits broken LD_LIBRARY_PATH
-    # (bundled libcrypto vs system Python 3.14 / OpenSSL 3.3 → ImportError).
+def _find_ytdlp_exe() -> str | None:
     if _is_frozen():
-        return sys.executable
-    exe = shutil.which("yt-dlp")
-    if exe:
-        return exe
-    return sys.executable
+        return None
+    return shutil.which("yt-dlp")
 
 
-def _ytdlp_base_args(ffmpeg_location: str) -> list[str]:
-    exe = _find_ytdlp()
-    if exe == sys.executable:
-        return [
-            sys.executable,
-            "-m",
-            "yt_dlp",
-            "--ffmpeg-location",
-            ffmpeg_location,
-        ]
-    return [exe, "--ffmpeg-location", ffmpeg_location]
+def _use_inprocess_ytdlp() -> bool:
+    # Frozen PyInstaller exe IS the GUI — sys.executable -m yt_dlp re-opens the app.
+    return _is_frozen()
 
 
 def parse_time(value: str) -> str:
@@ -132,8 +119,70 @@ def _friendly_error(output: str, code: int) -> str:
     return _t("err.ytdlp_code", code=code, tail=tail)
 
 
+def _ytdlp_options(ffmpeg: str, section: str, output_path: Path) -> dict[str, Any]:
+    return {
+        "download_sections": [section],
+        "force_keyframes_at_cuts": True,
+        "extractor_args": {"youtube": {"player_client": ["android", "tv", "web"]}},
+        "remote_components": ["ejs:github"],
+        "retries": 10,
+        "fragment_retries": 10,
+        "socket_timeout": 30,
+        "format": "bv*+ba/b",
+        "merge_output_format": "mp4",
+        "noplaylist": True,
+        "no_warnings": True,
+        "ffmpeg_location": ffmpeg,
+        "outtmpl": str(output_path),
+        "progress": True,
+    }
+
+
+class _YtdlpLogBridge:
+    def __init__(self, on_log: Callable[[str], None]) -> None:
+        self._on_log = on_log
+        self.lines: list[str] = []
+
+    def _emit(self, msg: str) -> None:
+        if not msg:
+            return
+        self.lines.append(msg)
+        self._on_log(msg)
+
+    def debug(self, msg: str) -> None:
+        if msg.startswith("[debug] "):
+            return
+        self._emit(msg)
+
+    def info(self, msg: str) -> None:
+        self._emit(msg)
+
+    def warning(self, msg: str) -> None:
+        self._emit(msg)
+
+    def error(self, msg: str) -> None:
+        self._emit(msg)
+
+    def text(self) -> str:
+        return "\n".join(self.lines)
+
+
 def _build_ytdlp_cmd(ffmpeg: str, section: str, output_path: Path, url: str) -> list[str]:
-    return _ytdlp_base_args(ffmpeg) + [
+    exe = _find_ytdlp_exe()
+    if exe:
+        return [exe, "--ffmpeg-location", ffmpeg] + _cli_args_tail(section, output_path, url)
+
+    return [
+        sys.executable,
+        "-m",
+        "yt_dlp",
+        "--ffmpeg-location",
+        ffmpeg,
+    ] + _cli_args_tail(section, output_path, url)
+
+
+def _cli_args_tail(section: str, output_path: Path, url: str) -> list[str]:
+    return [
         "--download-sections",
         section,
         "--force-keyframes-at-cuts",
@@ -160,7 +209,11 @@ def _build_ytdlp_cmd(ffmpeg: str, section: str, output_path: Path, url: str) -> 
     ]
 
 
-def _run_ytdlp(cmd: list[str], on_log: Callable[[str], None]) -> tuple[int, str]:
+def _should_skip_log_line(line: str) -> bool:
+    return line.startswith("Fontconfig warning:")
+
+
+def _run_ytdlp_subprocess(cmd: list[str], on_log: Callable[[str], None]) -> tuple[int, str]:
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
@@ -175,11 +228,52 @@ def _run_ytdlp(cmd: list[str], on_log: Callable[[str], None]) -> tuple[int, str]
     assert proc.stdout is not None
     for line in proc.stdout:
         line = line.rstrip()
-        if line:
-            lines.append(line)
-            on_log(line)
+        if not line or _should_skip_log_line(line):
+            continue
+        lines.append(line)
+        on_log(line)
 
     return proc.wait(), "\n".join(lines)
+
+
+def _run_ytdlp_inprocess(
+    ffmpeg: str,
+    section: str,
+    output_path: Path,
+    url: str,
+    on_log: Callable[[str], None],
+) -> tuple[int, str]:
+    import yt_dlp
+
+    bridge = _YtdlpLogBridge(on_log)
+    opts = _ytdlp_options(ffmpeg, section, output_path)
+    opts["logger"] = bridge
+
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            ydl.download([url])
+        return 0, bridge.text()
+    except yt_dlp.utils.DownloadError as exc:
+        msg = str(exc)
+        bridge.error(msg)
+        return 1, bridge.text() or msg
+    except Exception as exc:  # noqa: BLE001
+        msg = str(exc)
+        bridge.error(msg)
+        return 1, bridge.text() or msg
+
+
+def _run_ytdlp(
+    ffmpeg: str,
+    section: str,
+    output_path: Path,
+    url: str,
+    on_log: Callable[[str], None],
+) -> tuple[int, str]:
+    if _use_inprocess_ytdlp():
+        return _run_ytdlp_inprocess(ffmpeg, section, output_path, url, on_log)
+    cmd = _build_ytdlp_cmd(ffmpeg, section, output_path, url)
+    return _run_ytdlp_subprocess(cmd, on_log)
 
 
 def build_output_path(output_dir: Path, title: str) -> Path:
@@ -225,7 +319,6 @@ def download_clip(
 
     ffmpeg = _resolve_ffmpeg()
     section = f"*{start}-{end}"
-    cmd = _build_ytdlp_cmd(ffmpeg, section, output_path, url)
 
     ui_log(_t("clip.downloading", start=start, end=end))
     ui_log(_t("clip.saving", path=output_path))
@@ -239,7 +332,7 @@ def download_clip(
             ui_log(_t("clip.retry", attempt=attempt, total=max_attempts, wait=wait_s))
             time.sleep(wait_s)
 
-        code, last_output = _run_ytdlp(cmd, ui_log)
+        code, last_output = _run_ytdlp(ffmpeg, section, output_path, url, ui_log)
         if code == 0:
             break
 
