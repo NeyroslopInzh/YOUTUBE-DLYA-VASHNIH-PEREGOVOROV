@@ -1,4 +1,4 @@
-# Инструкция — YouTube Clipper
+# Инструкция — YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL
 
 Программа вырезает нужный отрезок с YouTube и сохраняет его в MP4.
 
@@ -9,7 +9,7 @@
 **Для кого:** просто скачал и пользуешься.
 
 1. Открой папку `release/windows/`
-2. Дважды кликни **`YouTube Clipper.exe`**
+2. Дважды кликни **`YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL.exe`**
 3. Заполни поля (или они подтянутся из прошлой сессии)
 4. Нажми **Скачать отрезок**
 
@@ -45,10 +45,10 @@
    Или вручную:
    ```bat
    py -m pip install -r requirements.txt -r requirements-build.txt
-   py -m PyInstaller "YouTube Clipper.spec" --noconfirm
-   copy "dist\YouTube Clipper.exe" "release\windows\YouTube Clipper.exe"
+   py -m PyInstaller app.spec --noconfirm
+   copy "dist\YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL.exe" "release\windows\"
    ```
-3. Готовый файл: `release/windows/YouTube Clipper.exe`
+3. Готовый файл: `release/windows/YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL.exe`
 
 ---
 
@@ -67,7 +67,7 @@
    ```
 3. Запуск:
    ```bash
-   ./release/linux/youtube-clipper
+   ./release/linux/YOUTUBE\ VIDEOS\ DOWNLOAD\ FOR\ VASHNIE\ PEREGOVORI\ 2002\ KRUTO\ COOL\ SOSAL
    ```
 
 Если нужен только исходный запуск без сборки:
@@ -148,20 +148,21 @@ sudo apt install python3-tk
 
 ```
 ├── main.py                  # GUI
+├── app_name.py              # название приложения
 ├── clipper.py               # логика yt-dlp
 ├── app_log.py               # файловые логи
 ├── settings.py              # автосохранение полей
 ├── run.bat                  # запуск через CMD (Windows)
 ├── build_windows.bat        # сборка exe (Windows)
 ├── build_linux.sh           # сборка бинарника (Linux)
-├── YouTube Clipper.spec     # конфиг PyInstaller
+├── app.spec                 # конфиг PyInstaller
 ├── requirements.txt
 ├── requirements-build.txt
 ├── release/
 │   ├── windows/
-│   │   └── YouTube Clipper.exe   # готовый Windows-бинарник
+│   │   └── YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL.exe
 │   └── linux/
-│       └── youtube-clipper       # собирается на Linux
+│       └── YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL
 ├── INSTRUCTIONS.md          # эта инструкция
 └── README.md
 ```

@@ -1,4 +1,4 @@
-"""YouTube Clipper — GUI for cutting YouTube video segments."""
+"""GUI for cutting YouTube video segments."""
 
 from __future__ import annotations
 
@@ -12,10 +12,10 @@ from tkinter import filedialog, messagebox
 import customtkinter as ctk
 
 from app_log import get_log_file, logger, setup_logging
+from app_name import APP_NAME
 from clipper import ClipRequest, ClipperError, download_clip
 from settings import FormSettings, load_settings, save_settings
 
-APP_TITLE = "YouTube Clipper"
 DEFAULT_OUTPUT = Path.home() / "Videos" / "YouTubeClips"
 
 
@@ -26,7 +26,7 @@ class ClipperApp(ctk.CTk):
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
 
-        self.title(APP_TITLE)
+        self.title(APP_NAME)
         self.geometry("720x560")
         self.minsize(640, 480)
 
@@ -44,8 +44,10 @@ class ClipperApp(ctk.CTk):
 
         header = ctk.CTkLabel(
             self,
-            text="Вырезка отрезков с YouTube",
-            font=ctk.CTkFont(size=22, weight="bold"),
+            text=APP_NAME,
+            font=ctk.CTkFont(size=16, weight="bold"),
+            wraplength=680,
+            justify="center",
         )
         header.pack(pady=(16, 4))
 
@@ -169,10 +171,10 @@ class ClipperApp(ctk.CTk):
                 elif kind == "done":
                     self._set_busy(False)
                     if msg:
-                        messagebox.showinfo(APP_TITLE, msg)
+                        messagebox.showinfo(APP_NAME, msg)
                 elif kind == "error":
                     self._set_busy(False)
-                    messagebox.showerror(APP_TITLE, msg)
+                    messagebox.showerror(APP_NAME, msg)
             else:
                 self._append_log(item)
 

@@ -2,6 +2,8 @@
 chcp 65001 >nul
 cd /d "%~dp0"
 
+set APP_NAME=YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL
+
 echo [Build] Installing dependencies...
 py -m pip install -r requirements.txt -r requirements-build.txt -q
 if errorlevel 1 (
@@ -11,7 +13,7 @@ if errorlevel 1 (
 )
 
 echo [Build] Running PyInstaller...
-py -m PyInstaller "YouTube Clipper.spec" --noconfirm
+py -m PyInstaller app.spec --noconfirm
 if errorlevel 1 (
     echo Build failed: PyInstaller error.
     pause
@@ -19,9 +21,9 @@ if errorlevel 1 (
 )
 
 if not exist "release\windows" mkdir "release\windows"
-copy /Y "dist\YouTube Clipper.exe" "release\windows\YouTube Clipper.exe" >nul
-copy /Y "dist\YouTube Clipper.exe" "YouTube Clipper.exe" >nul
+copy /Y "dist\%APP_NAME%.exe" "release\windows\%APP_NAME%.exe" >nul
+copy /Y "dist\%APP_NAME%.exe" "%APP_NAME%.exe" >nul
 
 echo.
-echo Done: release\windows\YouTube Clipper.exe
+echo Done: release\windows\%APP_NAME%.exe
 pause

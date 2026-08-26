@@ -1,4 +1,4 @@
-"""Файловое логирование для диагностики YouTube Clipper."""
+"""Файловое логирование."""
 
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ def setup_logging() -> logging.Logger:
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-    logger = logging.getLogger("youtube_clipper")
+    logger = logging.getLogger("yvp_vashnie_peregovori")
     logger.setLevel(logging.DEBUG)
     logger.propagate = False
 

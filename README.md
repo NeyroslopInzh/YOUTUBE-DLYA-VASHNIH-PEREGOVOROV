@@ -1,4 +1,4 @@
-# YOUTUBE DLYA VASHNIH PEREGOVOROV
+# YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL
 
 Десктопная программа для вырезки отрезков с YouTube в MP4.
 
@@ -9,7 +9,7 @@
 
 | Способ | Файл | Описание |
 |--------|------|----------|
-| **1. Готовый EXE** | `release/windows/YouTube Clipper.exe` | Двойной клик, без Python и консоли |
+| **1. Готовый EXE** | `release/windows/YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL.exe` | Двойной клик, без Python и консоли |
 | **2. CMD / BAT** | `run.bat` | Запуск из исходников через Python |
 | **3. Сборка Windows** | `build_windows.bat` | Компиляция exe из Python-кода |
 | **4. Сборка Linux** | `build_linux.sh` | Бинарник для Linux (сборка на Linux) |
@@ -30,7 +30,7 @@ Python · CustomTkinter · yt-dlp · ffmpeg (imageio-ffmpeg)
 ## Скачать готовый EXE
 
 ```
-release/windows/YouTube Clipper.exe
+release/windows/YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL.exe
 ```
 
 ## Разработка
