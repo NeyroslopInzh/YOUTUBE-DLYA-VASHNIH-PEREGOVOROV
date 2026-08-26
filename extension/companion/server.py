@@ -9,14 +9,16 @@
 from __future__ import annotations
 
 import json
+import mimetypes
 import sys
+import tempfile
 import threading
 import traceback
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "src"
@@ -24,13 +26,19 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from clipper import ClipRequest, ClipperError, download_clip  # noqa: E402
-from paths import default_output_dir, ensure_output_dir  # noqa: E402
 
 HOST = "127.0.0.1"
 PORT = 8765
+TEMP_ROOT = Path(tempfile.gettempdir()) / "yvp-companion"
 
 _jobs: dict[str, dict[str, Any]] = {}
 _jobs_lock = threading.Lock()
+
+
+def _job_temp_dir(job_id: str) -> Path:
+    path = TEMP_ROOT / job_id
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def _cors_headers(handler: BaseHTTPRequestHandler) -> None:
@@ -68,9 +76,11 @@ def _run_job(job_id: str, request: ClipRequest) -> None:
 
     try:
         result = download_clip(request, on_log=on_log)
+        filename = result.output_path.name
         with _jobs_lock:
             _jobs[job_id]["status"] = "done"
             _jobs[job_id]["path"] = str(result.output_path)
+            _jobs[job_id]["filename"] = filename
     except ClipperError as exc:
         on_log(str(exc))
         with _jobs_lock:
@@ -84,8 +94,36 @@ def _run_job(job_id: str, request: ClipRequest) -> None:
             _jobs[job_id]["traceback"] = traceback.format_exc()
 
 
+def _serve_job_file(handler: BaseHTTPRequestHandler, job_id: str) -> None:
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+    if not job or job.get("status") != "done":
+        _json_response(handler, 404, {"error": "file not ready"})
+        return
+
+    file_path = Path(job["path"])
+    if not file_path.is_file():
+        _json_response(handler, 404, {"error": "file missing"})
+        return
+
+    filename = job.get("filename") or file_path.name
+    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    data = file_path.read_bytes()
+
+    handler.send_response(200)
+    _cors_headers(handler)
+    handler.send_header("Content-Type", content_type)
+    handler.send_header("Content-Length", str(len(data)))
+    handler.send_header(
+        "Content-Disposition",
+        f'attachment; filename="{filename}"; filename*=UTF-8\'\'{quote(filename)}',
+    )
+    handler.end_headers()
+    handler.wfile.write(data)
+
+
 class CompanionHandler(BaseHTTPRequestHandler):
-    server_version = "YVPCompanion/0.1"
+    server_version = "YVPCompanion/0.2"
 
     def log_message(self, fmt: str, *args: object) -> None:
         print(f"[companion] {self.address_string()} {fmt % args}")
@@ -96,31 +134,39 @@ class CompanionHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:
-        path = urlparse(self.path).path
+        path = urlparse(self.path).path.rstrip("/") or "/"
 
         if path == "/health":
             _json_response(self, 200, {"ok": True, "service": "yvp-companion"})
             return
 
         if path.startswith("/jobs/"):
-            job_id = path.split("/", 2)[2]
-            with _jobs_lock:
-                job = _jobs.get(job_id)
-            if not job:
-                _json_response(self, 404, {"error": "job not found"})
+            parts = path.split("/")
+            # /jobs/{id} or /jobs/{id}/file
+            if len(parts) >= 3:
+                job_id = parts[2]
+                if len(parts) >= 4 and parts[3] == "file":
+                    _serve_job_file(self, job_id)
+                    return
+
+                with _jobs_lock:
+                    job = _jobs.get(job_id)
+                if not job:
+                    _json_response(self, 404, {"error": "job not found"})
+                    return
+                _json_response(
+                    self,
+                    200,
+                    {
+                        "job_id": job_id,
+                        "status": job["status"],
+                        "log": job["log"],
+                        "filename": job.get("filename"),
+                        "download_url": f"/jobs/{job_id}/file",
+                        "error": job.get("error"),
+                    },
+                )
                 return
-            _json_response(
-                self,
-                200,
-                {
-                    "job_id": job_id,
-                    "status": job["status"],
-                    "log": job["log"],
-                    "path": job.get("path"),
-                    "error": job.get("error"),
-                },
-            )
-            return
 
         _json_response(self, 404, {"error": "not found"})
 
@@ -135,14 +181,14 @@ class CompanionHandler(BaseHTTPRequestHandler):
             start = str(data.get("start", "")).strip()
             end = str(data.get("end", "")).strip()
             title = str(data.get("title", "")).strip()
-            output_raw = str(data.get("output_dir", "")).strip()
 
             if not url:
                 raise ClipperError("URL is required")
             if not title:
                 raise ClipperError("Title is required")
 
-            output_dir = ensure_output_dir(output_raw or default_output_dir())
+            job_id = uuid.uuid4().hex
+            output_dir = _job_temp_dir(job_id)
             request = ClipRequest(
                 url=url,
                 start=start,
@@ -151,7 +197,6 @@ class CompanionHandler(BaseHTTPRequestHandler):
                 output_dir=output_dir,
             )
 
-            job_id = uuid.uuid4().hex
             with _jobs_lock:
                 _jobs[job_id] = {"status": "running", "log": []}
 
@@ -165,8 +210,10 @@ class CompanionHandler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
+    TEMP_ROOT.mkdir(parents=True, exist_ok=True)
     httpd = ThreadingHTTPServer((HOST, PORT), CompanionHandler)
     print(f"YVP companion listening on http://{HOST}:{PORT}")
+    print(f"Temp clips: {TEMP_ROOT}")
     print("Press Ctrl+C to stop.")
     try:
         httpd.serve_forever()

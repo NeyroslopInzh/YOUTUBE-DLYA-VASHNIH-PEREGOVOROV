@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "YVP Clipper",
   "short_name": "YVP Clipper",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Скачать отрезок текущего YouTube-видео (GNU GPL v3). Companion: localhost:8765.",
   "action": {
     "default_title": "YVP Clipper",
@@ -13,7 +13,7 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "downloads"],
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://youtu.be/*",

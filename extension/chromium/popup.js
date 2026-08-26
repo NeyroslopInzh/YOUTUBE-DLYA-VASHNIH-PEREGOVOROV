@@ -13,7 +13,6 @@ const els = {
   end: document.getElementById("end"),
   plusSeconds: document.getElementById("plus-seconds"),
   title: document.getElementById("title"),
-  outputDir: document.getElementById("output-dir"),
   btnRefreshStart: document.getElementById("btn-refresh-start"),
   btnCalcEnd: document.getElementById("btn-calc-end"),
   btnDownload: document.getElementById("btn-download"),
@@ -145,6 +144,39 @@ function setBusy(busy) {
   els.btnCalcEnd.disabled = busy;
 }
 
+function ensureMp4Filename(name) {
+  const trimmed = String(name || "clip").trim() || "clip";
+  return trimmed.toLowerCase().endsWith(".mp4") ? trimmed : `${trimmed}.mp4`;
+}
+
+async function triggerBrowserDownload(jobId, filename) {
+  const safeName = ensureMp4Filename(filename);
+  const url = `${COMPANION_URL}/jobs/${jobId}/file`;
+
+  await new Promise((resolve, reject) => {
+    chrome.downloads.download(
+      {
+        url,
+        filename: safeName,
+        // saveAs не задаём — браузер сам: «Спросить где» или папка по умолчанию
+      },
+      (downloadId) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        if (downloadId === undefined) {
+          reject(new Error("Браузер не начал скачивание"));
+          return;
+        }
+        resolve(downloadId);
+      }
+    );
+  });
+
+  return safeName;
+}
+
 async function pollJob(jobId) {
   const res = await fetch(`${COMPANION_URL}/jobs/${jobId}`);
   if (!res.ok) {
@@ -170,8 +202,16 @@ async function pollJob(jobId) {
   setBusy(false);
 
   if (data.status === "done") {
-    setStatus("Готово");
-    appendLog(`Сохранено: ${data.path}`);
+    setStatus("Скачивание…");
+    try {
+      const name = await triggerBrowserDownload(jobId, data.filename || els.title.value.trim());
+      setStatus("Готово");
+      appendLog(`Файл передан браузеру: ${name}`);
+      appendLog("Папка — как в настройках Chrome (Загрузки).");
+    } catch (err) {
+      setStatus("Ошибка");
+      appendLog(`Не удалось скачать через браузер: ${err.message}`);
+    }
     return;
   }
 
@@ -219,7 +259,6 @@ async function startDownload(event) {
     start,
     end,
     title: els.title.value.trim(),
-    output_dir: els.outputDir.value.trim(),
   };
 
   try {
