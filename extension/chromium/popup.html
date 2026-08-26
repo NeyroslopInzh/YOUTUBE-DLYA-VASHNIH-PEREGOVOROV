@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>YVP Clipper</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <h1>YVP Clipper</h1>
+      <p class="hint">Открытое видео на YouTube · companion на localhost:8765</p>
+    </header>
+
+    <div id="page-error" class="banner error hidden"></div>
+    <div id="companion-error" class="banner warn hidden"></div>
+
+    <form id="clip-form">
+      <label>
+        <span>Начало отрезка</span>
+        <input id="start" name="start" type="text" placeholder="1:30 или 90" required />
+        <button type="button" id="btn-refresh-start" class="secondary" title="Взять текущее время с плеера">
+          ↻ с плеера
+        </button>
+      </label>
+
+      <label>
+        <span>Конец отрезка</span>
+        <input id="end" name="end" type="text" placeholder="3:45 или 225" required />
+      </label>
+
+      <div class="plus-row">
+        <label class="plus-field">
+          <span>+ секунд от начала</span>
+          <input id="plus-seconds" type="number" min="1" max="86400" value="10" />
+        </label>
+        <button type="button" id="btn-calc-end" class="secondary">→ конец</button>
+      </div>
+
+      <label>
+        <span>Название файла</span>
+        <input id="title" name="title" type="text" placeholder="мой_клип" required />
+      </label>
+
+      <label>
+        <span>Папка сохранения</span>
+        <input id="output-dir" name="output_dir" type="text" placeholder="~/Videos/YouTubeClips" />
+      </label>
+
+      <button type="submit" id="btn-download" class="primary">Скачать отрезок</button>
+    </form>
+
+    <section class="log-panel">
+      <div class="log-header">
+        <span>Лог</span>
+        <span id="status">Готов</span>
+      </div>
+      <pre id="log"></pre>
+    </section>
+
+    <footer class="license">
+      GNU GPL v3 · copyleft · форки только под GPL
+    </footer>
+
+    <script src="time.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
