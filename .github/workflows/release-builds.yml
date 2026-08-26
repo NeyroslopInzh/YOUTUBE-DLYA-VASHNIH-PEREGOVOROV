@@ -59,7 +59,7 @@ jobs:
       - name: Install system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3 python3-pip python3-tk python3-venv ffmpeg rsync
+          sudo apt-get install -y python3 python3-pip python3-tk python3-venv ffmpeg rsync zip
 
       - name: Install Python dependencies
         run: |
@@ -90,9 +90,39 @@ jobs:
           name: linux-installer
           path: dist/YVPClipper-linux-installer.tar.gz
 
+  package-extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip rsync
+          python -m pip install --upgrade pip Pillow
+
+      - name: Pack extension archives
+        run: bash scripts/package_extension.sh
+
+      - name: Upload extension zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-zip
+          path: dist/YVPClipper-extension.zip
+
+      - name: Upload extension tar.gz
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-tarball
+          path: dist/YVPClipper-extension.tar.gz
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build-windows, build-linux]
+    needs: [build-windows, build-linux, package-extension]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -109,4 +139,6 @@ jobs:
             artifacts/windows-installer/*
             artifacts/linux-portable/*
             artifacts/linux-installer/*
+            artifacts/extension-zip/*
+            artifacts/extension-tarball/*
           generate_release_notes: true

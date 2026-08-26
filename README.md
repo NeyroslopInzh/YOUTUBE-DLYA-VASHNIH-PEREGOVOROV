@@ -27,10 +27,35 @@ Desktop app + опциональное **Chromium-расширение** (Chrome
 |-------|---------|-------|
 | **Только app** | portable `.exe` | portable binary |
 | **App + расширение** | `YVPClipper-Setup.exe` | `YVPClipper-linux-installer.tar.gz` |
+| **Только расширение** | `YVPClipper-extension.zip` | `YVPClipper-extension.tar.gz` |
 
 После **установщика**: запусти app один раз — покажет путь к папке `extension` для Load unpacked (на языке интерфейса).
 
 Расширение **не ставится автоматически** — Chrome/Opera не дают. Только вручную: режим разработчика → Load unpacked → папка из подсказки.
+
+### Где лежит приложение (для расширения)
+
+Расширение стучится в desktop app по `http://127.0.0.1:8766` — **путь к exe не важен**, главное чтобы app была запущена (или поднялась через `yvp://`).
+
+Если ставил **установщик**, layout такой:
+
+| ОС | Каталог приложения | Папка для Load unpacked |
+|----|--------------------|-------------------------|
+| **Windows** | `%LOCALAPPDATA%\YVPClipper\` | `%LOCALAPPDATA%\YVPClipper\extension\` |
+| **Linux** | `~/.local/share/yvp-clipper/` | `~/.local/share/yvp-clipper/extension/` |
+
+На Linux при заданном `XDG_DATA_HOME` вместо `~/.local/share` будет `$XDG_DATA_HOME/yvp-clipper/`.
+
+**Без установщика (portable + архив расширения):** положи app и распакованное расширение куда угодно → запусти app → Load unpacked на папку с `manifest.json`. Протокол `yvp://` не зарегистрирован — первый раз app нужно запустить самому (или держать открытой).
+
+---
+
+## Ручная установка (без Setup / install.sh)
+
+1. Скачай **portable app** + **`YVPClipper-extension.zip`** (Windows) или **`.tar.gz`** (Linux).
+2. Распакуй архив расширения — внутри папка `YVPClipper-extension/` с `manifest.json`.
+3. Запусти portable app (двойной клик / `./YOUTUBE\ VIDEOS\ ...`).
+4. `chrome://extensions` → режим разработчика → **Load unpacked** → выбери распакованную папку.
 
 ---
 

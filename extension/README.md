@@ -24,6 +24,24 @@
 
 Папка для Load unpacked: `extension/` (этот каталог).
 
+### Только расширение (из Releases)
+
+| ОС | Архив |
+|----|-------|
+| Windows | `YVPClipper-extension.zip` |
+| Linux | `YVPClipper-extension.tar.gz` |
+
+Распакуй → Load unpacked на папку с `manifest.json`. Desktop app — отдельно (portable exe/binary из Releases).
+
+**Где лежит app после установщика:**
+
+| ОС | App | Extension |
+|----|-----|-----------|
+| Windows | `%LOCALAPPDATA%\YVPClipper\` | `%LOCALAPPDATA%\YVPClipper\extension\` |
+| Linux | `~/.local/share/yvp-clipper/` | `~/.local/share/yvp-clipper/extension/` |
+
+(`$XDG_DATA_HOME/yvp-clipper/` если `XDG_DATA_HOME` задан.)
+
 ## Load unpacked
 
 1. Открой `chrome://extensions` или `opera://extensions` **сам**
