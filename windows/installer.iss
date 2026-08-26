@@ -3,7 +3,7 @@
 
 #define MyAppName "YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL"
 #define MyAppExe "YVPClipper.exe"
-#define MyAppVersion "3.0.0"
+#define MyAppVersion "3.0.1"
 #define MyAppPublisher "NeyroslopInzh"
 #define MyAppURL "https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV"
 
@@ -27,14 +27,21 @@ SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
 ArchitecturesInstallIn64BitMode=x64compatible
+ShowLanguageDialog=yes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
+Name: "hebrew"; MessagesFile: "compiler:Languages\Hebrew.isl"
+Name: "hindi"; MessagesFile: "..\installer\languages\Hindi.isl"
+Name: "uzbek"; MessagesFile: "..\installer\languages\Uzbek.isl"
 
 [CustomMessages]
 english.ExtensionHint=After install, open the app once — it will show where the browser extension folder is (Load unpacked).
 russian.ExtensionHint=После установки запустите приложение — оно покажет путь к папке расширения (Загрузить распакованное).
+hebrew.ExtensionHint=לאחר ההתקנה, הפעל את היישום פעם אחת — הוא יציג את נתיב תיקיית התוסף (Load unpacked).
+hindi.ExtensionHint=इंstall के बाद app एक बार खोलें — extension folder का path दिखेगा (Load unpacked).
+uzbek.ExtensionHint=O'rnatgandan so'ng ilovani bir marta ishga tushiring — kengaytma papkasi ko'rsatiladi (Load unpacked).
 
 [Files]
 Source: "..\dist\windows\YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL.exe"; DestDir: "{app}"; DestName: "{#MyAppExe}"; Flags: ignoreversion

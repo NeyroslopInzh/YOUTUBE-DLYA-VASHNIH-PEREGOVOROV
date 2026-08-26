@@ -27,6 +27,7 @@ jobs:
           python scripts/sync_extension_manifest.py
           python scripts/generate_app_icon.py
           python extension/icons/generate_icons.py
+          python scripts/generate_uzbek_isl.py
 
       - name: Build portable exe
         run: python -m PyInstaller windows/app.spec --noconfirm --distpath dist/windows --workpath build/windows
