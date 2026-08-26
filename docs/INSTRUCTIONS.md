@@ -91,6 +91,9 @@ sudo pacman -S ffmpeg   # Arch
 sudo apt install ffmpeg # Debian
 ```
 
+### OpenSSL / libcrypto.so.3 (Linux, бинарник из Releases)
+Если в логе `OPENSSL_3.3.0 not found` — это конфликт системного `yt-dlp` с библиотеками PyInstaller. Обновись до **v2.1.1+**: бинарник вызывает встроенный `yt-dlp`, системный не нужен.
+
 ### Ctrl+C не работает (Windows, русская раскладка)
 Обновись до v2.0.0+ — исправлено через keycode.
 

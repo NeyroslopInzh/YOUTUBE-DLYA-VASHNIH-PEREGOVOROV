@@ -37,7 +37,15 @@ def _t(key: str, **kwargs: object) -> str:
     return get_i18n().t(key, **kwargs)
 
 
+def _is_frozen() -> bool:
+    return bool(getattr(sys, "frozen", False))
+
+
 def _find_ytdlp() -> str:
+    # PyInstaller bundle ships yt_dlp; system yt-dlp inherits broken LD_LIBRARY_PATH
+    # (bundled libcrypto vs system Python 3.14 / OpenSSL 3.3 → ImportError).
+    if _is_frozen():
+        return sys.executable
     exe = shutil.which("yt-dlp")
     if exe:
         return exe
@@ -110,6 +118,8 @@ def _resolve_ffmpeg() -> str:
 
 def _friendly_error(output: str, code: int) -> str:
     text = output.lower()
+    if "openssl_3.3.0" in text or "libcrypto.so.3" in text:
+        return _t("err.openssl_mismatch")
     if "ffmpeg exited with code -11" in text or "code -11" in text:
         return _t("err.ffmpeg_segfault")
     if "winerror 10054" in text or "forcibly closed" in text:
