@@ -31,6 +31,7 @@ EXCLUDES = [
 
 ICON_SRC = os.path.join(ROOT, "extension", "icons", "icon48.png")
 APP_ICON = os.path.join(ROOT, "assets", "app.ico")
+PRICOL_GIF = os.path.join(ROOT, "assets", "pricol.gif")
 
 datas = []
 binaries = []
@@ -44,6 +45,10 @@ for package in ("customtkinter", "yt_dlp", "imageio_ffmpeg", "pystray"):
 
 if os.path.isfile(ICON_SRC):
     datas.append((ICON_SRC, "assets"))
+if os.path.isfile(APP_ICON):
+    datas.append((APP_ICON, "assets"))
+if os.path.isfile(PRICOL_GIF):
+    datas.append((PRICOL_GIF, "assets"))
 
 a = Analysis(
     [os.path.join(SRC, "main.py")],
@@ -51,7 +56,7 @@ a = Analysis(
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports
-    + ["clipper", "app_log", "settings", "app_name", "paths", "keyboard", "i18n", "bridge_server", "chrome_downloads", "protocol", "tray", "install_paths", "flag_icons", "uzbek_flag", "app_version"],
+    + ["clipper", "app_log", "settings", "app_name", "paths", "keyboard", "i18n", "bridge_server", "chrome_downloads", "protocol", "tray", "install_paths", "flag_icons", "uzbek_flag", "app_version", "pricol_gif"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[os.path.join(SPEC_DIR, "runtime_ffmpeg.py")],

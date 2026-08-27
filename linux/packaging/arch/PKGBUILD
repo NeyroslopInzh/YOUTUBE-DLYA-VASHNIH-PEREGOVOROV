@@ -1,7 +1,7 @@
-pkgname=yvp-vashnie-peregovori
-pkgver=3.0.4
+﻿pkgname=yvp-vashnie-peregovori
+pkgver=4.0.0
 pkgrel=1
-pkgdesc="YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL — вырезка отрезков YouTube в MP4"
+pkgdesc="YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL вЂ” РІС‹СЂРµР·РєР° РѕС‚СЂРµР·РєРѕРІ YouTube РІ MP4"
 url="https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV"
 arch=('x86_64')
 license=('GPL-3.0-or-later')

@@ -24,6 +24,7 @@ from protocol import bridge_already_running, is_protocol_launch
 from install_paths import extension_dir, was_installed_via_setup
 from settings import FormSettings, load_settings, save_settings
 from tray import TrayIcon
+from pricol_gif import AnimatedGifLabel, pricol_gif_path
 
 # Цвета кнопок флагов
 _FLAG_ACTIVE = ("#1f6aa5", "#144870")  # fg, hover
@@ -38,8 +39,8 @@ class ClipperApp(ctk.CTk):
         ctk.set_default_color_theme("blue")
 
         self.title(APP_NAME)
-        self.geometry("720x460")
-        self.minsize(640, 420)
+        self.geometry("920x480")
+        self.minsize(820, 440)
         self._apply_window_icon()
 
         self._log_queue: queue.Queue[str | tuple[str, str]] = queue.Queue()
@@ -47,6 +48,7 @@ class ClipperApp(ctk.CTk):
         self._ui_labels: dict[str, ctk.CTkLabel] = {}
         self._entries: dict[str, ctk.CTkEntry] = {}
         self._flag_buttons: dict[str, ctk.CTkButton] = {}
+        self._pricol: AnimatedGifLabel | None = None
         self._lang_code = "ru"
         self._logs_expanded = False
         self._extension_session = is_protocol_launch()
@@ -108,7 +110,7 @@ class ClipperApp(ctk.CTk):
             self,
             text=APP_NAME,
             font=ctk.CTkFont(size=16, weight="bold"),
-            wraplength=680,
+            wraplength=860,
             justify="center",
         )
         self.header.pack(pady=(16, 4))
@@ -119,7 +121,13 @@ class ClipperApp(ctk.CTk):
         form = ctk.CTkFrame(self)
         form.pack(fill="x", padx=16, pady=(0, 8))
 
-        lang_row = ctk.CTkFrame(form, fg_color="transparent")
+        form_body = ctk.CTkFrame(form, fg_color="transparent")
+        form_body.pack(fill="x", padx=4, pady=4)
+
+        fields = ctk.CTkFrame(form_body, fg_color="transparent")
+        fields.pack(side="left", fill="both", expand=True)
+
+        lang_row = ctk.CTkFrame(fields, fg_color="transparent")
         lang_row.pack(fill="x", padx=12, pady=(10, 0))
         self._ui_labels["ui.label_language"] = ctk.CTkLabel(
             lang_row, text=self._t("ui.label_language"), width=140, anchor="w"
@@ -151,12 +159,12 @@ class ClipperApp(ctk.CTk):
         self.title_var = tk.StringVar(value=saved.title)
         self.dir_var = tk.StringVar(value=saved.output_dir or str(default_output_dir()))
 
-        self._row(form, "ui.label_url", self.url_var, "ui.ph_url")
-        self._row(form, "ui.label_start", self.start_var, "ui.ph_start")
-        self._row(form, "ui.label_end", self.end_var, "ui.ph_end")
-        self._row(form, "ui.label_title", self.title_var, "ui.ph_title")
+        self._row(fields, "ui.label_url", self.url_var, "ui.ph_url")
+        self._row(fields, "ui.label_start", self.start_var, "ui.ph_start")
+        self._row(fields, "ui.label_end", self.end_var, "ui.ph_end")
+        self._row(fields, "ui.label_title", self.title_var, "ui.ph_title")
 
-        dir_row = ctk.CTkFrame(form, fg_color="transparent")
+        dir_row = ctk.CTkFrame(fields, fg_color="transparent")
         dir_row.pack(fill="x", padx=12, pady=(10, 10))
         self._ui_labels["ui.label_output_dir"] = ctk.CTkLabel(
             dir_row, text=self._t("ui.label_output_dir"), width=140, anchor="w"
@@ -166,6 +174,18 @@ class ClipperApp(ctk.CTk):
         self._entries["dir"].pack(side="left", fill="x", expand=True, padx=(8, 8))
         self.browse_btn = ctk.CTkButton(dir_row, text=self._t("ui.btn_browse"), width=80, command=self._pick_dir)
         self.browse_btn.pack(side="right")
+
+        gif_path = pricol_gif_path()
+        if gif_path is not None:
+            pricol_wrap = ctk.CTkFrame(form_body, fg_color="transparent")
+            pricol_wrap.pack(side="right", padx=(8, 12), pady=10)
+            try:
+                self._pricol = AnimatedGifLabel(pricol_wrap, gif_path, max_width=220)
+                self._pricol.pack(anchor="center")
+                self._pricol.start()
+            except Exception as exc:  # noqa: BLE001
+                logger().warning("Pricol GIF failed: %s", exc)
+                self._pricol = None
 
         btn_row = ctk.CTkFrame(self, fg_color="transparent")
         btn_row.pack(fill="x", padx=16, pady=(0, 8))
@@ -247,14 +267,14 @@ class ClipperApp(ctk.CTk):
             self.log_body.pack(fill="both", expand=True)
             self.log_frame.pack_configure(fill="both", expand=True)
             self.log_toggle_btn.configure(text=self._t("ui.log_collapse"))
-            self.geometry("720x620")
-            self.minsize(640, 520)
+            self.geometry("920x640")
+            self.minsize(820, 540)
         else:
             self.log_body.pack_forget()
             self.log_frame.pack_configure(fill="x", expand=False)
             self.log_toggle_btn.configure(text=self._t("ui.log_expand"))
-            self.geometry("720x460")
-            self.minsize(640, 420)
+            self.geometry("920x480")
+            self.minsize(820, 440)
 
     def _apply_language(self) -> None:
         self.hint_label.configure(text=self._t("ui.hint"))
@@ -449,6 +469,9 @@ class ClipperApp(ctk.CTk):
             self._tray.stop()
             self._tray = None
         stop_bridge_server()
+        if self._pricol is not None:
+            self._pricol.stop()
+            self._pricol = None
         try:
             save_settings(self._collect_settings())
         except OSError as exc:

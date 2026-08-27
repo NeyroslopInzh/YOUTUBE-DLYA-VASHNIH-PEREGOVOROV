@@ -2,12 +2,8 @@
 // Copyright (C) 2026 NeyroslopInzh contributors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-const APP_BRIDGE_URL = "http://127.0.0.1:8766";
-const YVP_PROTOCOL_URL = "yvp://start";
 const GITHUB_RELEASES_URL =
   "https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV/releases/latest";
-const APP_LAUNCH_TIMEOUT_MS = 15000;
-const APP_LAUNCH_POLL_MS = 500;
 
 const els = {
   pageError: document.getElementById("page-error"),
@@ -28,8 +24,7 @@ const els = {
 };
 
 let videoInfo = null;
-let pollTimer = null;
-let appBridgeOk = false;
+let pollActive = false;
 let bridgeInfo = null;
 
 function setStatus(text) {
@@ -56,10 +51,6 @@ function hide(el) {
   el.classList.add("hidden");
 }
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
@@ -80,7 +71,10 @@ async function loadVideoInfo() {
     info = await chrome.tabs.sendMessage(tab.id, { type: "GET_VIDEO_INFO" });
   } catch {
     try {
-      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ["time.js", "clip-bridge.js", "clip-ui.js", "content.js"],
+      });
       info = await chrome.tabs.sendMessage(tab.id, { type: "GET_VIDEO_INFO" });
     } catch (err) {
       show(els.pageError, `Не удалось прочитать плеер: ${err.message}`);
@@ -107,36 +101,6 @@ async function loadVideoInfo() {
   return info;
 }
 
-async function checkAppBridge() {
-  try {
-    const res = await fetch(`${APP_BRIDGE_URL}/health`, { method: "GET" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const info = await res.json();
-    appBridgeOk = Boolean(info.ok && info.service === "yvp-app-bridge");
-    bridgeInfo = info;
-    return appBridgeOk;
-  } catch {
-    appBridgeOk = false;
-    bridgeInfo = null;
-    return false;
-  }
-}
-
-function launchAppViaProtocol() {
-  window.location.href = YVP_PROTOCOL_URL;
-}
-
-async function waitForAppBridge(timeoutMs = APP_LAUNCH_TIMEOUT_MS) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (await checkAppBridge()) {
-      return true;
-    }
-    await sleep(APP_LAUNCH_POLL_MS);
-  }
-  return false;
-}
-
 function showInstallPanel(reason) {
   const textEl = document.getElementById("install-text");
   if (textEl) {
@@ -150,26 +114,18 @@ function hideInstallPanel() {
 }
 
 async function ensureAppRunning() {
-  if (await checkAppBridge()) {
+  const result = await yvpEnsureAppRunning();
+  if (result.ok) {
+    bridgeInfo = result.info;
     hide(els.hostError);
     hideInstallPanel();
-    return true;
-  }
-
-  appendLog("Приложение не отвечает — запускаю через yvp:// …");
-  setStatus("Запуск приложения…");
-  launchAppViaProtocol();
-
-  if (await waitForAppBridge()) {
-    hide(els.hostError);
-    hideInstallPanel();
-    appendLog("Приложение запущено.");
     return true;
   }
 
   show(
     els.hostError,
-    "Не удалось запустить desktop-приложение. Если Chrome спрашивает «Открыть приложение?» — нажми Разрешить."
+    result.error ||
+      "Не удалось запустить desktop-приложение. Если Chrome спрашивает «Открыть приложение?» — нажми Разрешить."
   );
   showInstallPanel(
     "Приложение не установлено или не отвечает. Скачай exe с GitHub и запусти windows\\install.bat (регистрирует yvp://)."
@@ -178,11 +134,12 @@ async function ensureAppRunning() {
 }
 
 async function updateHostBanner() {
-  if (await checkAppBridge()) {
+  const info = await yvpCheckAppBridge();
+  if (info) {
+    bridgeInfo = info;
     hide(els.hostError);
     return true;
   }
-
   hide(els.hostError);
   return false;
 }
@@ -224,65 +181,36 @@ function setBusy(busy) {
   els.btnCalcEnd.disabled = busy;
 }
 
-async function pollAppJob(jobId) {
-  const res = await fetch(`${APP_BRIDGE_URL}/jobs/${jobId}`);
-  if (!res.ok) {
-    throw new Error(`App bridge HTTP ${res.status}`);
+async function downloadViaApp(payload) {
+  const started = await yvpStartClip(payload);
+  if (started.output_dir) {
+    appendLog(`Папка: ${started.output_dir}`);
   }
-  const data = await res.json();
 
-  if (Array.isArray(data.log)) {
-    els.log.textContent = data.log.join("\n");
-    if (data.log.length) {
-      els.log.textContent += "\n";
+  pollActive = true;
+  const job = await yvpPollJob(started.job_id, (data) => {
+    if (Array.isArray(data.log)) {
+      els.log.textContent = data.log.join("\n");
+      if (data.log.length) {
+        els.log.textContent += "\n";
+      }
+      els.log.scrollTop = els.log.scrollHeight;
     }
-    els.log.scrollTop = els.log.scrollHeight;
-  }
-
-  if (data.status === "running") {
-    setStatus("Загрузка…");
-    return;
-  }
-
-  clearInterval(pollTimer);
-  pollTimer = null;
+    if (data.status === "running") {
+      setStatus("Загрузка…");
+    }
+  });
+  pollActive = false;
   setBusy(false);
 
-  if (data.status === "done") {
+  if (job.status === "done") {
     setStatus("Готово");
-    appendLog(`Сохранено: ${data.output_path || data.filename}`);
+    appendLog(`Сохранено: ${job.output_path || job.filename}`);
     return;
   }
 
   setStatus("Ошибка");
-  appendLog(data.error || "Неизвестная ошибка");
-}
-
-async function downloadViaApp(payload) {
-  const res = await fetch(`${APP_BRIDGE_URL}/clip`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || `HTTP ${res.status}`);
-  }
-
-  if (data.output_dir) {
-    appendLog(`Папка: ${data.output_dir}`);
-  }
-
-  pollTimer = setInterval(() => {
-    pollAppJob(data.job_id).catch((err) => {
-      clearInterval(pollTimer);
-      pollTimer = null;
-      setBusy(false);
-      setStatus("Ошибка");
-      appendLog(err.message);
-    });
-  }, 500);
-  await pollAppJob(data.job_id);
+  appendLog(job.error || "Неизвестная ошибка");
 }
 
 async function startDownload(event) {
@@ -339,10 +267,12 @@ async function startDownload(event) {
   try {
     await downloadViaApp(payload);
   } catch (err) {
+    pollActive = false;
     setStatus("Ошибка");
     appendLog(err.message);
+    setBusy(false);
   } finally {
-    if (!pollTimer) {
+    if (!pollActive) {
       setBusy(false);
     }
   }

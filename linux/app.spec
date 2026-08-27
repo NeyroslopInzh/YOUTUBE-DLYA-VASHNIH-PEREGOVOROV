@@ -14,6 +14,7 @@ from app_name import APP_NAME  # noqa: E402
 
 APP_NAME_STR = APP_NAME
 ICON_SRC = os.path.join(ROOT, "extension", "icons", "icon48.png")
+PRICOL_GIF = os.path.join(ROOT, "assets", "pricol.gif")
 
 EXCLUDES = [
     "matplotlib",
@@ -43,6 +44,8 @@ for package in ("customtkinter", "yt_dlp", "pystray"):
 
 if os.path.isfile(ICON_SRC):
     datas.append((ICON_SRC, "assets"))
+if os.path.isfile(PRICOL_GIF):
+    datas.append((PRICOL_GIF, "assets"))
 
 a = Analysis(
     [os.path.join(SRC, "main.py")],
@@ -66,6 +69,7 @@ a = Analysis(
         "flag_icons",
         "uzbek_flag",
         "app_version",
+        "pricol_gif",
     ],
     hookspath=[],
     hooksconfig={},
