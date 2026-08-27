@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Generate multi-size .ico from Uzbek flag PNG for Windows exe/installer."""
+"""Generate multi-size .ico from Uzbek flag for Windows exe/installer."""
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 try:
@@ -11,19 +12,24 @@ except ImportError as exc:
     raise SystemExit("pip install Pillow") from exc
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "extension" / "icons" / "icon128.png"
+sys.path.insert(0, str(ROOT / "src"))
+
+from uzbek_flag import draw_uzbekistan_icon  # noqa: E402
+
 OUT = ROOT / "assets" / "app.ico"
+OUT_PNG = ROOT / "assets" / "app_icon.png"
+SIZES = [(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
 
 
 def main() -> None:
-    if not SRC.is_file():
-        raise SystemExit(f"Missing {SRC}")
-
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    image = Image.open(SRC).convert("RGBA")
-    sizes = [(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
-    image.save(OUT, format="ICO", sizes=sizes)
-    print(f"Wrote {OUT}")
+    master = draw_uzbekistan_icon(256).convert("RGBA")
+    master.save(OUT_PNG, format="PNG")
+
+    # Pillow сам даунскейлит master под каждый size в ICO
+    master.save(OUT, format="ICO", sizes=SIZES)
+    print(f"Wrote {OUT} ({OUT.stat().st_size} bytes)")
+    print(f"Wrote {OUT_PNG}")
 
 
 if __name__ == "__main__":

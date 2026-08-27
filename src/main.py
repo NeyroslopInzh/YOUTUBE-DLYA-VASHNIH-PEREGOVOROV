@@ -16,13 +16,18 @@ from app_log import get_log_file, logger, setup_logging
 from app_name import APP_NAME
 from bridge_server import start_bridge_server, stop_bridge_server
 from clipper import ClipRequest, ClipperError, download_clip
-from i18n import LANGUAGES, code_from_label, get_i18n, label_from_code, set_language
+from i18n import LANGUAGE_FLAGS, get_i18n, set_language
+from flag_icons import flag_ctk_image
 from keyboard import bind_layout_safe_shortcuts, is_layout_safe_ctrl
 from paths import default_output_dir, ensure_output_dir
 from protocol import bridge_already_running, is_protocol_launch
 from install_paths import extension_dir, was_installed_via_setup
 from settings import FormSettings, load_settings, save_settings
 from tray import TrayIcon
+
+# Цвета кнопок флагов
+_FLAG_ACTIVE = ("#1f6aa5", "#144870")  # fg, hover
+_FLAG_IDLE = ("#2b2b2b", "#3a3a3a")
 
 
 class ClipperApp(ctk.CTk):
@@ -33,14 +38,17 @@ class ClipperApp(ctk.CTk):
         ctk.set_default_color_theme("blue")
 
         self.title(APP_NAME)
-        self.geometry("720x600")
-        self.minsize(640, 500)
+        self.geometry("720x460")
+        self.minsize(640, 420)
+        self._apply_window_icon()
 
         self._log_queue: queue.Queue[str | tuple[str, str]] = queue.Queue()
         self._worker: threading.Thread | None = None
         self._ui_labels: dict[str, ctk.CTkLabel] = {}
         self._entries: dict[str, ctk.CTkEntry] = {}
+        self._flag_buttons: dict[str, ctk.CTkButton] = {}
         self._lang_code = "ru"
+        self._logs_expanded = False
         self._extension_session = is_protocol_launch()
         self._force_quit = False
         self._quit_timer: str | None = None
@@ -76,6 +84,25 @@ class ClipperApp(ctk.CTk):
     def _t(self, key: str, **kwargs: object) -> str:
         return get_i18n().t(key, **kwargs)
 
+    def _apply_window_icon(self) -> None:
+        """Иконка окна/таскбара — тот же узбекский флаг."""
+        candidates: list[Path] = []
+        if getattr(sys, "frozen", False):
+            meipass = getattr(sys, "_MEIPASS", None)
+            if meipass:
+                candidates.append(Path(meipass) / "assets" / "app.ico")
+            candidates.append(Path(sys.executable).resolve().parent / "assets" / "app.ico")
+        root = Path(__file__).resolve().parent.parent
+        candidates.append(root / "assets" / "app.ico")
+        for path in candidates:
+            if path.is_file():
+                try:
+                    self.iconbitmap(default=str(path))
+                    self.iconbitmap(str(path))
+                except tk.TclError:
+                    continue
+                return
+
     def _build_ui(self, saved: FormSettings) -> None:
         self.header = ctk.CTkLabel(
             self,
@@ -98,15 +125,25 @@ class ClipperApp(ctk.CTk):
             lang_row, text=self._t("ui.label_language"), width=140, anchor="w"
         )
         self._ui_labels["ui.label_language"].pack(side="left")
-        self.lang_var = tk.StringVar(value=label_from_code(saved.language))
-        self.lang_menu = ctk.CTkOptionMenu(
-            lang_row,
-            variable=self.lang_var,
-            values=[name for _, name in LANGUAGES],
-            command=self._on_language_change,
-            width=180,
-        )
-        self.lang_menu.pack(side="left", padx=(8, 0))
+
+        flags = ctk.CTkFrame(lang_row, fg_color="transparent")
+        flags.pack(side="left", padx=(8, 0))
+        self._flag_images: dict[str, object] = {}
+        for code, _emoji in LANGUAGE_FLAGS:
+            img = flag_ctk_image(code)
+            self._flag_images[code] = img  # keep ref so GC не сожрёт
+            btn = ctk.CTkButton(
+                flags,
+                text="",
+                image=img,
+                width=56,
+                height=36,
+                corner_radius=4,
+                command=lambda c=code: self._set_language(c),
+            )
+            btn.pack(side="left", padx=(0, 6))
+            self._flag_buttons[code] = btn
+        self._refresh_flag_buttons()
 
         self.url_var = tk.StringVar(value=saved.url)
         self.start_var = tk.StringVar(value=saved.start)
@@ -120,7 +157,7 @@ class ClipperApp(ctk.CTk):
         self._row(form, "ui.label_title", self.title_var, "ui.ph_title")
 
         dir_row = ctk.CTkFrame(form, fg_color="transparent")
-        dir_row.pack(fill="x", padx=12, pady=(0, 10))
+        dir_row.pack(fill="x", padx=12, pady=(10, 10))
         self._ui_labels["ui.label_output_dir"] = ctk.CTkLabel(
             dir_row, text=self._t("ui.label_output_dir"), width=140, anchor="w"
         )
@@ -142,27 +179,45 @@ class ClipperApp(ctk.CTk):
         )
         self.download_btn.pack(side="left")
 
-        self.copy_log_btn = ctk.CTkButton(
-            btn_row, text=self._t("ui.btn_copy_log"), width=110, command=self._copy_log
-        )
-        self.copy_log_btn.pack(side="left", padx=(8, 0))
-
-        self.logs_btn = ctk.CTkButton(
-            btn_row, text=self._t("ui.btn_logs"), width=70, command=self._open_logs
-        )
-        self.logs_btn.pack(side="left", padx=(8, 0))
-
         self.status_label = ctk.CTkLabel(btn_row, text=self._t("ui.status_ready"), text_color="gray70")
         self.status_label.pack(side="left", padx=16)
 
-        log_frame = ctk.CTkFrame(self)
-        log_frame.pack(fill="both", expand=True, padx=16, pady=(0, 16))
+        self.log_frame = ctk.CTkFrame(self)
+        self.log_frame.pack(fill="x", padx=16, pady=(0, 16))
 
-        self._ui_labels["ui.log_title"] = ctk.CTkLabel(log_frame, text=self._t("ui.log_title"), anchor="w")
-        self._ui_labels["ui.log_title"].pack(fill="x", padx=12, pady=(8, 4))
+        log_header = ctk.CTkFrame(self.log_frame, fg_color="transparent")
+        log_header.pack(fill="x", padx=8, pady=(6, 6))
 
-        self.log_box = ctk.CTkTextbox(log_frame, font=ctk.CTkFont(family="Consolas", size=12))
-        self.log_box.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        self.log_toggle_btn = ctk.CTkButton(
+            log_header,
+            text=self._t("ui.log_expand"),
+            width=120,
+            height=28,
+            fg_color="transparent",
+            hover_color=("#3a3a3a", "#3a3a3a"),
+            text_color=("gray90", "gray90"),
+            anchor="w",
+            command=self._toggle_logs,
+        )
+        self.log_toggle_btn.pack(side="left")
+
+        self.log_body = ctk.CTkFrame(self.log_frame, fg_color="transparent")
+
+        log_tools = ctk.CTkFrame(self.log_body, fg_color="transparent")
+        log_tools.pack(fill="x", padx=8, pady=(0, 6))
+
+        self.copy_log_btn = ctk.CTkButton(
+            log_tools, text=self._t("ui.btn_copy_log"), width=110, command=self._copy_log
+        )
+        self.copy_log_btn.pack(side="left")
+
+        self.logs_btn = ctk.CTkButton(
+            log_tools, text=self._t("ui.btn_logs"), width=70, command=self._open_logs
+        )
+        self.logs_btn.pack(side="left", padx=(8, 0))
+
+        self.log_box = ctk.CTkTextbox(self.log_body, font=ctk.CTkFont(family="Consolas", size=12), height=180)
+        self.log_box.pack(fill="both", expand=True, padx=8, pady=(0, 8))
         self._setup_log_interactions()
         bind_layout_safe_shortcuts(
             self,
@@ -171,10 +226,35 @@ class ClipperApp(ctk.CTk):
             on_select_all_log=lambda: self._select_all_log(None),
         )
 
-    def _on_language_change(self, choice: str) -> None:
-        self._lang_code = code_from_label(choice)
-        set_language(self._lang_code)
+    def _refresh_flag_buttons(self) -> None:
+        for code, btn in self._flag_buttons.items():
+            if code == self._lang_code:
+                btn.configure(fg_color=_FLAG_ACTIVE[0], hover_color=_FLAG_ACTIVE[1])
+            else:
+                btn.configure(fg_color=_FLAG_IDLE[0], hover_color=_FLAG_IDLE[1])
+
+    def _set_language(self, code: str) -> None:
+        if code == self._lang_code:
+            return
+        self._lang_code = code
+        set_language(code)
+        self._refresh_flag_buttons()
         self._apply_language()
+
+    def _toggle_logs(self) -> None:
+        self._logs_expanded = not self._logs_expanded
+        if self._logs_expanded:
+            self.log_body.pack(fill="both", expand=True)
+            self.log_frame.pack_configure(fill="both", expand=True)
+            self.log_toggle_btn.configure(text=self._t("ui.log_collapse"))
+            self.geometry("720x620")
+            self.minsize(640, 520)
+        else:
+            self.log_body.pack_forget()
+            self.log_frame.pack_configure(fill="x", expand=False)
+            self.log_toggle_btn.configure(text=self._t("ui.log_expand"))
+            self.geometry("720x460")
+            self.minsize(640, 420)
 
     def _apply_language(self) -> None:
         self.hint_label.configure(text=self._t("ui.hint"))
@@ -184,6 +264,9 @@ class ClipperApp(ctk.CTk):
         self.download_btn.configure(text=self._t("ui.btn_download"))
         self.copy_log_btn.configure(text=self._t("ui.btn_copy_log"))
         self.logs_btn.configure(text=self._t("ui.btn_logs"))
+        self.log_toggle_btn.configure(
+            text=self._t("ui.log_collapse" if self._logs_expanded else "ui.log_expand")
+        )
         if not (self._worker and self._worker.is_alive()):
             self.status_label.configure(text=self._t("ui.status_ready"))
         placeholders = {

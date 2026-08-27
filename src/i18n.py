@@ -13,6 +13,15 @@ LANGUAGES: list[tuple[str, str]] = [
     ("uz", "Oʻzbekcha"),
 ]
 
+# Флаги для кнопок языка (emoji)
+LANGUAGE_FLAGS: list[tuple[str, str]] = [
+    ("ru", "🇷🇺"),
+    ("en", "🇺🇸"),
+    ("he", "🇮🇱"),
+    ("hi", "🇮🇳"),
+    ("uz", "🇺🇿"),
+]
+
 DEFAULT_LANG = "ru"
 
 STRINGS: dict[str, dict[str, str]] = {
@@ -37,6 +46,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "ui.status_done": "Готово",
         "ui.status_error": "Ошибка",
         "ui.log_title": "Лог",
+        "ui.log_expand": "▶ Лог",
+        "ui.log_collapse": "▼ Лог",
         "ui.menu_copy": "Копировать",
         "ui.menu_select_all": "Выделить всё",
         "ui.msg_saved": "Сохранено:\n{path}",
@@ -91,6 +102,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "ui.status_done": "Done",
         "ui.status_error": "Error",
         "ui.log_title": "Log",
+        "ui.log_expand": "▶ Log",
+        "ui.log_collapse": "▼ Log",
         "ui.menu_copy": "Copy",
         "ui.menu_select_all": "Select all",
         "ui.msg_saved": "Saved:\n{path}",
@@ -145,6 +158,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "ui.status_done": "הושלם",
         "ui.status_error": "שגיאה",
         "ui.log_title": "לוג",
+        "ui.log_expand": "▶ לוג",
+        "ui.log_collapse": "▼ לוג",
         "ui.menu_copy": "העתק",
         "ui.menu_select_all": "בחר הכל",
         "ui.msg_saved": "נשמר:\n{path}",
@@ -199,6 +214,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "ui.status_done": "हो गया",
         "ui.status_error": "त्रुटि",
         "ui.log_title": "लॉग",
+        "ui.log_expand": "▶ लॉग",
+        "ui.log_collapse": "▼ लॉग",
         "ui.menu_copy": "कॉपी",
         "ui.menu_select_all": "सब चुनें",
         "ui.msg_saved": "सेव:\n{path}",
@@ -253,6 +270,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "ui.status_done": "Tayyor",
         "ui.status_error": "Xato",
         "ui.log_title": "Log",
+        "ui.log_expand": "▶ Log",
+        "ui.log_collapse": "▼ Log",
         "ui.menu_copy": "Nusxalash",
         "ui.menu_select_all": "Hammasini tanlash",
         "ui.msg_saved": "Saqlandi:\n{path}",

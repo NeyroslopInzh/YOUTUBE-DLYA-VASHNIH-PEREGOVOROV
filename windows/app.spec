@@ -51,7 +51,7 @@ a = Analysis(
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports
-    + ["clipper", "app_log", "settings", "app_name", "paths", "keyboard", "i18n", "bridge_server", "chrome_downloads", "protocol", "tray", "install_paths"],
+    + ["clipper", "app_log", "settings", "app_name", "paths", "keyboard", "i18n", "bridge_server", "chrome_downloads", "protocol", "tray", "install_paths", "flag_icons", "uzbek_flag", "app_version"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[os.path.join(SPEC_DIR, "runtime_ffmpeg.py")],
