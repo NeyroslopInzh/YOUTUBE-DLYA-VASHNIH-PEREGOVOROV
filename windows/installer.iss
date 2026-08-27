@@ -1,5 +1,5 @@
 ; YVP Clipper — Windows installer (Inno Setup)
-; Build: windows\build-installer.bat (requires ISCC on PATH)
+; Build: PyInstaller windows/app.spec, then ISCC windows/installer.iss
 
 #define MyAppName "YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL"
 #define MyAppExe "YVPClipper.exe"

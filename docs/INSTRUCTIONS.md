@@ -24,8 +24,14 @@ Portable `.exe` из [Releases](https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VA
 
 ### Исходники / сборка
 ```bat
-windows\run.bat
-windows\build-installer.bat
+py -m pip install -r src/requirements.txt -r windows/requirements.txt
+py src\main.py
+```
+
+```bat
+py scripts\sync_extension_manifest.py
+py -m PyInstaller windows\app.spec --noconfirm --distpath dist\windows --workpath build\windows
+iscc windows\installer.iss
 ```
 
 ---

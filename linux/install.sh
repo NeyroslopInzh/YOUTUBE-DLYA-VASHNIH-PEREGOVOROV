@@ -82,8 +82,7 @@ mkdir -p "$INSTALL_DIR/extension" "$BIN_DIR" "$DESKTOP_DIR" "$MIME_DIR"
 install -m755 "$SRC_BIN" "$INSTALL_DIR/$APP_NAME"
 ln -sf "$INSTALL_DIR/$APP_NAME" "$BIN_DIR/$BIN_NAME"
 
-rsync -a --delete "$ROOT/extension/" "$INSTALL_DIR/extension/" \
-  --exclude='icons/generate_icons.py'
+rsync -a --delete "$ROOT/extension/" "$INSTALL_DIR/extension/"
 
 echo '1' >"$INSTALL_DIR/.yvp_installed"
 

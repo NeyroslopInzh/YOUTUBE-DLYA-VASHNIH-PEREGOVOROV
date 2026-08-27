@@ -7,14 +7,13 @@ cd "$ROOT"
 
 PYTHON="${PYTHON:-python3}"
 "$PYTHON" scripts/sync_extension_manifest.py
-"$PYTHON" extension/icons/generate_icons.py
 
 PACK_NAME="YVPClipper-extension"
 STAGE="$ROOT/dist/$PACK_NAME"
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
 
-rsync -a extension/ "$STAGE/" --exclude='icons/generate_icons.py'
+rsync -a extension/ "$STAGE/"
 
 mkdir -p dist
 rm -f "dist/$PACK_NAME.zip" "dist/$PACK_NAME.tar.gz"

@@ -383,8 +383,16 @@ Linuxda `XDG_DATA_HOME` berilgan bo‘lsa — `~/.local/share` o‘rniga `$XDG_D
 ### Из исходников
 
 ```bat
-windows\run.bat
-windows\build-installer.bat   REM exe + Setup (нужен Inno Setup)
+py -m pip install -r src/requirements.txt -r windows/requirements.txt
+py src\main.py
+```
+
+### Сборка exe + Setup
+
+```bat
+py scripts\sync_extension_manifest.py
+py -m PyInstaller windows\app.spec --noconfirm --distpath dist\windows --workpath build\windows
+iscc windows\installer.iss
 ```
 
 </details>
@@ -405,8 +413,16 @@ windows\build-installer.bat   REM exe + Setup (нужен Inno Setup)
 ### From source
 
 ```bat
-windows\run.bat
-windows\build-installer.bat   REM exe + Setup (needs Inno Setup)
+py -m pip install -r src/requirements.txt -r windows/requirements.txt
+py src\main.py
+```
+
+### Build exe + Setup
+
+```bat
+py scripts\sync_extension_manifest.py
+py -m PyInstaller windows\app.spec --noconfirm --distpath dist\windows --workpath build\windows
+iscc windows\installer.iss
 ```
 
 </details>
@@ -429,8 +445,16 @@ windows\build-installer.bat   REM exe + Setup (needs Inno Setup)
 ### מקוד מקור
 
 ```bat
-windows\run.bat
-windows\build-installer.bat   REM exe + Setup (צריך Inno Setup)
+py -m pip install -r src/requirements.txt -r windows/requirements.txt
+py src\main.py
+```
+
+### בניית exe + Setup
+
+```bat
+py scripts\sync_extension_manifest.py
+py -m PyInstaller windows\app.spec --noconfirm --distpath dist\windows --workpath build\windows
+iscc windows\installer.iss
 ```
 
 </div>
@@ -453,8 +477,16 @@ windows\build-installer.bat   REM exe + Setup (צריך Inno Setup)
 ### सोर्स से
 
 ```bat
-windows\run.bat
-windows\build-installer.bat   REM exe + Setup (Inno Setup चाहिए)
+py -m pip install -r src/requirements.txt -r windows/requirements.txt
+py src\main.py
+```
+
+### exe + Setup बिल्ड
+
+```bat
+py scripts\sync_extension_manifest.py
+py -m PyInstaller windows\app.spec --noconfirm --distpath dist\windows --workpath build\windows
+iscc windows\installer.iss
 ```
 
 </details>
@@ -475,8 +507,16 @@ windows\build-installer.bat   REM exe + Setup (Inno Setup चाहिए)
 ### Manbadan
 
 ```bat
-windows\run.bat
-windows\build-installer.bat   REM exe + Setup (Inno Setup kerak)
+py -m pip install -r src/requirements.txt -r windows/requirements.txt
+py src\main.py
+```
+
+### exe + Setup yig‘ish
+
+```bat
+py scripts\sync_extension_manifest.py
+py -m PyInstaller windows\app.spec --noconfirm --distpath dist\windows --workpath build\windows
+iscc windows\installer.iss
 ```
 
 </details>

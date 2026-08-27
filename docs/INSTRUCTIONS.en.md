@@ -5,7 +5,7 @@
 | Folder | Purpose |
 |--------|---------|
 | `src/` | Shared application code |
-| `windows/` | `run.bat`, `build.bat`, PyInstaller spec |
+| `windows/` | PyInstaller spec, Inno Setup (`installer.iss`) |
 | `linux/` | `run.sh`, `build.sh`, PyInstaller spec, PKGBUILD |
 | `docs/` | Documentation |
 
@@ -18,12 +18,15 @@ Download from [Releases](https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-P
 
 ### From source
 ```bat
-windows\run.bat
+py -m pip install -r src/requirements.txt -r windows/requirements.txt
+py src\main.py
 ```
 
-### Build EXE
+### Build EXE + installer
 ```bat
-windows\build.bat
+py scripts\sync_extension_manifest.py
+py -m PyInstaller windows\app.spec --noconfirm --distpath dist\windows --workpath build\windows
+iscc windows\installer.iss
 ```
 → `dist\windows\`
 

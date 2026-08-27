@@ -128,7 +128,7 @@ async function ensureAppRunning() {
       "Не удалось запустить desktop-приложение. Если Chrome спрашивает «Открыть приложение?» — нажми Разрешить."
   );
   showInstallPanel(
-    "Приложение не установлено или не отвечает. Скачай exe с GitHub и запусти windows\\install.bat (регистрирует yvp://)."
+    "Приложение не установлено или не отвечает. Скачай YVPClipper-Setup.exe с GitHub — установщик регистрирует yvp://."
   );
   return false;
 }

@@ -5,7 +5,7 @@
 | Papka | Vazifa |
 |-------|--------|
 | `src/` | Umumiy ilova kodi |
-| `windows/` | `run.bat`, `build.bat`, PyInstaller |
+| `windows/` | PyInstaller spec, Inno Setup (`installer.iss`) |
 | `linux/` | `run.sh`, `build.sh`, PKGBUILD |
 | `docs/` | Hujjatlar |
 
@@ -18,12 +18,14 @@
 
 ### Manbadan
 ```bat
-windows\run.bat
+py -m pip install -r src/requirements.txt -r windows/requirements.txt
+py src\main.py
 ```
 
-### EXE yig'ish
 ```bat
-windows\build.bat
+py scripts\sync_extension_manifest.py
+py -m PyInstaller windows\app.spec --noconfirm --distpath dist\windows --workpath build\windows
+iscc windows\installer.iss
 ```
 → `dist\windows\`
 
