@@ -3,7 +3,7 @@
 
 #define MyAppName "YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL"
 #define MyAppExe "YVPClipper.exe"
-#define MyAppVersion "4.0.0"
+#define MyAppVersion "4.0.1"
 #define MyAppPublisher "NeyroslopInzh"
 #define MyAppURL "https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV"
 

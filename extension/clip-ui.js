@@ -18,6 +18,8 @@ const YvpClipUI = (() => {
   let progressHost = null;
   let busy = false;
   let layoutRaf = 0;
+  let dragMoveHandler = null;
+  let dragUpHandler = null;
 
   function ensureStyles() {
     if (document.getElementById(YVP_STYLE_ID)) return;
@@ -43,13 +45,43 @@ const YvpClipUI = (() => {
 #yvp-clip-bar button.yvp-btn-subscribe:hover:not(:disabled){background:#d9d9d9!important}
 #yvp-clip-bar button.yvp-btn-ghost{background:rgba(255,255,255,.1)!important;color:#f1f1f1!important}
 #yvp-clip-bar button.yvp-btn-ghost:hover:not(:disabled){background:rgba(255,255,255,.2)!important}
-#yvp-marker-layer{position:absolute!important;left:0!important;right:0!important;height:18px!important;pointer-events:none!important;z-index:60!important;overflow:visible!important}
-#yvp-marker-layer .yvp-range-fill{position:absolute!important;top:6px!important;height:6px!important;border-radius:3px!important;background:rgba(62,166,255,.55)!important;pointer-events:none!important}
-#yvp-marker-layer .yvp-marker{position:absolute!important;top:1px!important;width:16px!important;height:16px!important;margin-left:-8px!important;border-radius:50%!important;border:2px solid #fff!important;box-shadow:0 1px 4px rgba(0,0,0,.6)!important;pointer-events:auto!important;cursor:ew-resize!important;z-index:61!important;box-sizing:border-box!important}
+
+/* Глушим нативный YT scrubber, пока активен режим клипа */
+html.yvp-clip-active .ytp-progress-bar,
+html.yvp-clip-active .ytp-progress-list,
+html.yvp-clip-active .ytp-chapters-container,
+html.yvp-clip-active .ytp-hover-progress,
+html.yvp-clip-active .ytp-progress-bar-padding{
+  pointer-events:none!important;
+}
+html.yvp-clip-active .ytp-progress-bar-container{
+  cursor:ew-resize!important;
+}
+
+#yvp-marker-layer{
+  position:absolute!important;left:0!important;right:0!important;top:-12px!important;bottom:-12px!important;
+  height:auto!important;min-height:40px!important;pointer-events:auto!important;
+  z-index:2147483646!important;overflow:visible!important;cursor:ew-resize!important;
+  touch-action:none!important;background:transparent!important;
+}
+#yvp-marker-layer .yvp-range-fill{
+  position:absolute!important;top:50%!important;transform:translateY(-50%)!important;height:6px!important;
+  border-radius:3px!important;background:rgba(62,166,255,.55)!important;pointer-events:none!important;
+}
+#yvp-marker-layer .yvp-marker{
+  position:absolute!important;top:50%!important;width:18px!important;height:18px!important;
+  margin:0!important;transform:translate(-50%,-50%)!important;border-radius:50%!important;
+  border:2px solid #fff!important;box-shadow:0 1px 4px rgba(0,0,0,.65)!important;
+  pointer-events:none!important;box-sizing:border-box!important;
+}
 #yvp-marker-layer .yvp-marker-start{background:#3ea6ff!important}
 #yvp-marker-layer .yvp-marker-end{background:#2ba640!important}
 `;
     (document.head || document.documentElement).appendChild(style);
+  }
+
+  function setYtScrubberBlocked(blocked) {
+    document.documentElement.classList.toggle("yvp-clip-active", Boolean(blocked));
   }
 
   function getVideo() {
@@ -67,30 +99,25 @@ const YvpClipUI = (() => {
   }
 
   function getMoviePlayer() {
-    return (
-      document.querySelector("#movie_player") ||
-      document.querySelector(".html5-video-player") ||
-      null
-    );
+    return document.querySelector("#movie_player") || document.querySelector(".html5-video-player") || null;
   }
 
-  function findProgressBar() {
+  function findProgressContainer() {
     const root = getMoviePlayer() || document;
     return (
-      root.querySelector(".ytp-progress-bar") ||
       root.querySelector(".ytp-progress-bar-container") ||
+      root.querySelector(".ytp-progress-bar")?.parentElement ||
       null
     );
   }
 
-  /** Видимая колонка primary — не скрытый дубль DOM. */
   function findPrimaryInner() {
     const candidates = [
       ...document.querySelectorAll("ytd-watch-flexy #primary-inner"),
       ...document.querySelectorAll("#primary-inner"),
     ];
     for (const el of candidates) {
-      if (!el || !el.isConnected) continue;
+      if (!el?.isConnected) continue;
       const rect = el.getBoundingClientRect();
       if (rect.width > 200 && rect.height > 100) return el;
     }
@@ -109,39 +136,27 @@ const YvpClipUI = (() => {
       if (below) return { parent: below, after: null, prepend: true };
       return { parent: primary, after: null, prepend: true };
     }
-
     const player =
       document.querySelector("ytd-watch-flexy #player") ||
       document.querySelector("#player-container-outer") ||
       document.querySelector("#player");
-    if (player?.parentElement) {
-      return { parent: player.parentElement, after: player };
-    }
+    if (player?.parentElement) return { parent: player.parentElement, after: player };
     return null;
   }
 
   function placeBar(bar) {
     const mount = findMountPoint();
     if (!mount?.parent) return false;
-
-    if (mount.prepend) {
-      mount.parent.insertBefore(bar, mount.parent.firstChild);
-    } else if (mount.after) {
-      mount.after.after(bar);
-    } else {
-      mount.parent.appendChild(bar);
-    }
+    if (mount.prepend) mount.parent.insertBefore(bar, mount.parent.firstChild);
+    else if (mount.after) mount.after.after(bar);
+    else mount.parent.appendChild(bar);
     return true;
   }
 
   function isBarInGoodPlace(bar) {
     if (!bar?.isConnected) return false;
     const primary = findPrimaryInner();
-    if (primary && primary.contains(bar)) {
-      const rect = bar.getBoundingClientRect();
-      return rect.width > 20;
-    }
-    // нет primary — хотя бы в документе и видима
+    if (primary && primary.contains(bar)) return bar.getBoundingClientRect().width > 20;
     const rect = bar.getBoundingClientRect();
     return rect.width > 20 && rect.bottom > 0;
   }
@@ -149,14 +164,8 @@ const YvpClipUI = (() => {
   function ensureBar() {
     ensureStyles();
     let bar = document.getElementById(YVP_BAR_ID);
-
-    if (bar && isBarInGoodPlace(bar)) {
-      return bar;
-    }
-
-    if (bar) {
-      bar.remove();
-    }
+    if (bar && isBarInGoodPlace(bar)) return bar;
+    if (bar) bar.remove();
 
     bar = document.createElement("div");
     bar.id = YVP_BAR_ID;
@@ -187,12 +196,10 @@ const YvpClipUI = (() => {
       "appearance:none;border:none;border-radius:18px;padding:0 16px;height:36px;background:rgba(255,255,255,.1);color:#f1f1f1;font:500 14px Roboto,Arial,sans-serif;cursor:pointer;";
 
     bar.append(toggle, download, cancel);
-
     if (!placeBar(bar)) {
       bar.remove();
       return null;
     }
-
     toggle.addEventListener("click", onToggle);
     download.addEventListener("click", onDownload);
     cancel.addEventListener("click", deactivate);
@@ -225,28 +232,54 @@ const YvpClipUI = (() => {
     }
   }
 
-  function pct(time, duration) {
-    if (!duration) return 0;
-    return Math.max(0, Math.min(100, (time / duration) * 100));
+  function markerXs(width, duration) {
+    const minGapPx = Math.max(16, (YVP_MIN_GAP / duration) * width);
+    let startX = (startSec / duration) * width;
+    let endX = (endSec / duration) * width;
+    startX = Math.max(0, Math.min(startX, width - minGapPx));
+    endX = Math.max(startX + minGapPx, Math.min(endX, width));
+    return { startX, endX };
+  }
+
+  function killEvent(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+  }
+
+  function onLayerPointerDown(event) {
+    if (!active || busy || !markerLayer) return;
+    if (event.button != null && event.button !== 0) return;
+    killEvent(event);
+
+    const video = getVideo();
+    const duration = getDuration(video);
+    if (!duration) return;
+
+    const rect = markerLayer.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const x = event.clientX - rect.left;
+    const { startX, endX } = markerXs(rect.width, duration);
+    const which = Math.abs(x - startX) <= Math.abs(x - endX) ? "start" : "end";
+    beginDrag(event, which);
   }
 
   function ensureMarkers() {
     ensureStyles();
-    const player = getMoviePlayer();
-    const progress = findProgressBar();
-    if (!player || !progress) return false;
+    const container = findProgressContainer();
+    if (!container) return false;
 
-    if (getComputedStyle(player).position === "static") {
-      player.style.position = "relative";
+    if (getComputedStyle(container).position === "static") {
+      container.style.position = "relative";
     }
 
-    if (markerLayer && markerLayer.isConnected && markerLayer.parentElement === player) {
+    if (markerLayer && markerLayer.isConnected && markerLayer.parentElement === container) {
       layoutMarkers();
       return true;
     }
 
     destroyMarkers();
-    progressHost = progress;
+    progressHost = container;
     markerLayer = document.createElement("div");
     markerLayer.id = YVP_LAYER_ID;
     markerLayer.innerHTML = `
@@ -254,15 +287,34 @@ const YvpClipUI = (() => {
       <div class="yvp-marker yvp-marker-start" data-yvp="m-start" title="Начало"></div>
       <div class="yvp-marker yvp-marker-end" data-yvp="m-end" title="Конец"></div>
     `;
-    player.appendChild(markerLayer);
+    container.appendChild(markerLayer);
 
-    markerLayer.querySelector('[data-yvp="m-start"]').addEventListener("pointerdown", (e) => beginDrag(e, "start"));
-    markerLayer.querySelector('[data-yvp="m-end"]').addEventListener("pointerdown", (e) => beginDrag(e, "end"));
+    markerLayer.addEventListener("pointerdown", onLayerPointerDown, true);
+    markerLayer.addEventListener("mousedown", killEvent, true);
+    markerLayer.addEventListener("click", killEvent, true);
+    markerLayer.addEventListener("dblclick", killEvent, true);
+
     layoutMarkers();
     return true;
   }
 
+  function clearDragListeners() {
+    if (dragMoveHandler) {
+      window.removeEventListener("pointermove", dragMoveHandler, true);
+      window.removeEventListener("mousemove", dragMoveHandler, true);
+      dragMoveHandler = null;
+    }
+    if (dragUpHandler) {
+      window.removeEventListener("pointerup", dragUpHandler, true);
+      window.removeEventListener("pointercancel", dragUpHandler, true);
+      window.removeEventListener("mouseup", dragUpHandler, true);
+      dragUpHandler = null;
+    }
+  }
+
   function destroyMarkers() {
+    clearDragListeners();
+    dragging = null;
     markerLayer?.remove();
     markerLayer = null;
     progressHost = null;
@@ -270,35 +322,20 @@ const YvpClipUI = (() => {
 
   function layoutMarkers() {
     if (!markerLayer) return;
-    const player = getMoviePlayer();
-    const progress = findProgressBar() || progressHost;
     const video = getVideo();
     const duration = getDuration(video);
-    if (!player || !progress || !duration) return;
-
-    progressHost = progress;
-    const playerRect = player.getBoundingClientRect();
-    const barRect = progress.getBoundingClientRect();
-    if (playerRect.width <= 0 || barRect.width <= 0) return;
-
-    const top = barRect.top - playerRect.top + (barRect.height - 18) / 2;
-    const left = barRect.left - playerRect.left;
-    const width = barRect.width;
-
-    markerLayer.style.top = `${Math.max(0, top)}px`;
-    markerLayer.style.left = `${left}px`;
-    markerLayer.style.width = `${width}px`;
-    markerLayer.style.right = "auto";
+    const width = markerLayer.getBoundingClientRect().width || markerLayer.clientWidth;
+    if (!duration || width <= 0) return;
 
     const fill = markerLayer.querySelector('[data-yvp="fill"]');
     const mStart = markerLayer.querySelector('[data-yvp="m-start"]');
     const mEnd = markerLayer.querySelector('[data-yvp="m-end"]');
-    const leftPct = pct(startSec, duration);
-    const rightPct = pct(endSec, duration);
-    fill.style.left = `${leftPct}%`;
-    fill.style.width = `${Math.max(0, rightPct - leftPct)}%`;
-    mStart.style.left = `${leftPct}%`;
-    mEnd.style.left = `${rightPct}%`;
+    const { startX, endX } = markerXs(width, duration);
+
+    fill.style.left = `${startX}px`;
+    fill.style.width = `${Math.max(0, endX - startX)}px`;
+    mStart.style.left = `${startX}px`;
+    mEnd.style.left = `${endX}px`;
   }
 
   function scheduleLayout() {
@@ -310,26 +347,37 @@ const YvpClipUI = (() => {
   }
 
   function beginDrag(event, which) {
-    if (!active || busy) return;
-    event.preventDefault();
-    event.stopPropagation();
+    if (!active || busy || !markerLayer) return;
+    clearDragListeners();
     dragging = which;
-    const onMove = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+
+    try {
+      markerLayer.setPointerCapture(event.pointerId);
+    } catch {
+      /* ignore */
+    }
+
+    dragMoveHandler = (e) => {
+      killEvent(e);
       moveDrag(e);
     };
-    const onUp = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+    dragUpHandler = (e) => {
+      killEvent(e);
       dragging = null;
-      window.removeEventListener("pointermove", onMove, true);
-      window.removeEventListener("pointerup", onUp, true);
-      window.removeEventListener("pointercancel", onUp, true);
+      try {
+        markerLayer?.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      clearDragListeners();
     };
-    window.addEventListener("pointermove", onMove, true);
-    window.addEventListener("pointerup", onUp, true);
-    window.addEventListener("pointercancel", onUp, true);
+
+    window.addEventListener("pointermove", dragMoveHandler, true);
+    window.addEventListener("pointerup", dragUpHandler, true);
+    window.addEventListener("pointercancel", dragUpHandler, true);
+    window.addEventListener("mousemove", dragMoveHandler, true);
+    window.addEventListener("mouseup", dragUpHandler, true);
+    moveDrag(event);
   }
 
   function moveDrag(event) {
@@ -358,20 +406,15 @@ const YvpClipUI = (() => {
     if (!video) return;
     loopHandler = () => {
       if (!active) return;
-      if (video.currentTime < startSec - 0.05) {
-        video.currentTime = startSec;
-      } else if (video.currentTime > endSec) {
-        video.currentTime = startSec;
-      }
+      if (video.currentTime < startSec - 0.05) video.currentTime = startSec;
+      else if (video.currentTime > endSec) video.currentTime = startSec;
     };
     video.addEventListener("timeupdate", loopHandler);
   }
 
   function stopLoop() {
     const video = getVideo();
-    if (video && loopHandler) {
-      video.removeEventListener("timeupdate", loopHandler);
-    }
+    if (video && loopHandler) video.removeEventListener("timeupdate", loopHandler);
     loopHandler = null;
   }
 
@@ -391,6 +434,7 @@ const YvpClipUI = (() => {
     }
 
     active = true;
+    setYtScrubberBlocked(true);
     setActiveUi();
 
     let tries = 0;
@@ -415,7 +459,7 @@ const YvpClipUI = (() => {
   function deactivate() {
     active = false;
     busy = false;
-    dragging = null;
+    setYtScrubberBlocked(false);
     stopLoop();
     destroyMarkers();
     setIdleUi();

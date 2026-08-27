@@ -12,6 +12,9 @@
   font-family: "Roboto", "Arial", sans-serif !important;
   box-sizing: border-box !important;
   width: 100% !important;
+  position: relative !important;
+  z-index: 10 !important;
+  min-height: 36px !important;
 }
 
 #yvp-clip-bar button.yvp-btn {
@@ -30,48 +33,47 @@
   cursor: pointer !important;
   white-space: nowrap !important;
   box-shadow: none !important;
-  text-transform: none !important;
+  display: inline-block !important;
 }
 
-#yvp-clip-bar button.yvp-btn:disabled {
-  opacity: 0.5 !important;
-  cursor: not-allowed !important;
+#yvp-clip-bar button.yvp-btn[hidden] {
+  display: none !important;
 }
 
-/* Как «Подписаться» в тёмной теме: белая таблетка */
 #yvp-clip-bar button.yvp-btn-subscribe {
   background: #f1f1f1 !important;
   color: #0f0f0f !important;
 }
 
-#yvp-clip-bar button.yvp-btn-subscribe:hover:not(:disabled) {
-  background: #d9d9d9 !important;
-}
-
-/* Как вторичная YouTube-кнопка (серая) */
 #yvp-clip-bar button.yvp-btn-ghost {
   background: rgba(255, 255, 255, 0.1) !important;
   color: #f1f1f1 !important;
 }
 
-#yvp-clip-bar button.yvp-btn-ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2) !important;
+html.yvp-clip-active .ytp-progress-bar,
+html.yvp-clip-active .ytp-progress-list,
+html.yvp-clip-active .ytp-chapters-container,
+html.yvp-clip-active .ytp-hover-progress,
+html.yvp-clip-active .ytp-progress-bar-padding {
+  pointer-events: none !important;
 }
 
-/* Markers — поверх прогрессбара плеера */
 #yvp-marker-layer {
   position: absolute !important;
   left: 0 !important;
   right: 0 !important;
-  height: 18px !important;
-  pointer-events: none !important;
-  z-index: 60 !important;
-  overflow: visible !important;
+  top: -12px !important;
+  bottom: -12px !important;
+  pointer-events: auto !important;
+  z-index: 2147483646 !important;
+  cursor: ew-resize !important;
+  touch-action: none !important;
 }
 
 #yvp-marker-layer .yvp-range-fill {
   position: absolute !important;
-  top: 6px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
   height: 6px !important;
   border-radius: 3px !important;
   background: rgba(62, 166, 255, 0.55) !important;
@@ -80,16 +82,14 @@
 
 #yvp-marker-layer .yvp-marker {
   position: absolute !important;
-  top: 1px !important;
-  width: 16px !important;
-  height: 16px !important;
-  margin-left: -8px !important;
+  top: 50% !important;
+  width: 18px !important;
+  height: 18px !important;
+  transform: translate(-50%, -50%) !important;
   border-radius: 50% !important;
   border: 2px solid #fff !important;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6) !important;
-  pointer-events: auto !important;
-  cursor: ew-resize !important;
-  z-index: 61 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.65) !important;
+  pointer-events: none !important;
   box-sizing: border-box !important;
 }
 
