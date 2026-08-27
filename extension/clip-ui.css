@@ -100,3 +100,8 @@ html.yvp-clip-active .ytp-progress-bar-padding {
 #yvp-marker-layer .yvp-marker-end {
   background: #2ba640 !important;
 }
+
+/* Не торчать поверх fullscreen */
+html.yvp-fs-hide-bar #yvp-clip-bar {
+  display: none !important;
+}

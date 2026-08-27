@@ -113,6 +113,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   setInterval(() => {
     try {
+      YvpClipUI.syncBarVisibility?.();
       if (YvpClipUI.isActive()) {
         YvpClipUI.layoutMarkers();
         YvpClipUI.inject();

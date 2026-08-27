@@ -76,6 +76,13 @@ html.yvp-clip-active .ytp-progress-bar-container{
 }
 #yvp-marker-layer .yvp-marker-start{background:#3ea6ff!important}
 #yvp-marker-layer .yvp-marker-end{background:#2ba640!important}
+
+/* Бар кнопок не должен торчать поверх fullscreen */
+html.yvp-fs-hide-bar #yvp-clip-bar,
+#movie_player.ytp-fullscreen ~ #yvp-clip-bar,
+.ytp-fullscreen #yvp-clip-bar{
+  display:none!important;
+}
 `;
     (document.head || document.documentElement).appendChild(style);
   }
@@ -114,51 +121,94 @@ html.yvp-clip-active .ytp-progress-bar-container{
   function findPrimaryInner() {
     const candidates = [
       ...document.querySelectorAll("ytd-watch-flexy #primary-inner"),
+      ...document.querySelectorAll("#columns #primary-inner"),
       ...document.querySelectorAll("#primary-inner"),
     ];
     for (const el of candidates) {
       if (!el?.isConnected) continue;
+      if (el.closest("[hidden]")) continue;
       const rect = el.getBoundingClientRect();
       if (rect.width > 200 && rect.height > 100) return el;
     }
-    return candidates[0] || null;
+    return null;
   }
 
+  function isForbiddenParent(el) {
+    if (!el) return true;
+    if (el === document.body || el === document.documentElement) return true;
+    if (el.id === "watch7-content") return true;
+    return false;
+  }
+
+  /** Только под плеером. Никогда body — иначе кнопка у логотипа / поверх fullscreen. */
   function findMountPoint() {
     const primary = findPrimaryInner();
     if (primary) {
+      const below = primary.querySelector("#below");
+      if (below && !isForbiddenParent(below)) {
+        return { parent: below, after: null, prepend: true };
+      }
       const player =
         primary.querySelector("#player") ||
         primary.querySelector("ytd-player") ||
         primary.querySelector("#player-container-outer");
-      if (player) return { parent: player.parentElement || primary, after: player };
-      const below = primary.querySelector("#below");
-      if (below) return { parent: below, after: null, prepend: true };
-      return { parent: primary, after: null, prepend: true };
+      if (player?.parentElement && !isForbiddenParent(player.parentElement)) {
+        return { parent: player.parentElement, after: player };
+      }
+      if (!isForbiddenParent(primary)) {
+        return { parent: primary, after: null, prepend: true };
+      }
     }
-    const player =
-      document.querySelector("ytd-watch-flexy #player") ||
-      document.querySelector("#player-container-outer") ||
-      document.querySelector("#player");
-    if (player?.parentElement) return { parent: player.parentElement, after: player };
+
+    const below =
+      document.querySelector("ytd-watch-flexy #below") ||
+      document.querySelector("ytd-app #below");
+    if (below && below.closest("ytd-app, ytd-watch-flexy") && !isForbiddenParent(below)) {
+      return { parent: below, after: null, prepend: true };
+    }
     return null;
   }
 
   function placeBar(bar) {
     const mount = findMountPoint();
-    if (!mount?.parent) return false;
+    if (!mount?.parent || isForbiddenParent(mount.parent)) return false;
     if (mount.prepend) mount.parent.insertBefore(bar, mount.parent.firstChild);
     else if (mount.after) mount.after.after(bar);
     else mount.parent.appendChild(bar);
+    if (isForbiddenParent(bar.parentElement)) {
+      bar.remove();
+      return false;
+    }
     return true;
+  }
+
+  function isFullscreenUi() {
+    if (document.fullscreenElement || document.webkitFullscreenElement) return true;
+    const player = getMoviePlayer();
+    if (player?.classList.contains("ytp-fullscreen")) return true;
+    if (document.body?.classList.contains("ytp-fullscreen") || document.documentElement?.classList.contains("ytp-fullscreen")) {
+      return true;
+    }
+    return Boolean(document.querySelector("#movie_player.ytp-fullscreen, .html5-video-player.ytp-fullscreen"));
+  }
+
+  function syncBarVisibility() {
+    const bar = document.getElementById(YVP_BAR_ID);
+    if (!bar) return;
+    const hide = isFullscreenUi();
+    bar.style.setProperty("display", hide ? "none" : "flex", "important");
+    document.documentElement.classList.toggle("yvp-fs-hide-bar", hide);
   }
 
   function isBarInGoodPlace(bar) {
     if (!bar?.isConnected) return false;
+    if (isForbiddenParent(bar.parentElement)) return false;
     const primary = findPrimaryInner();
     if (primary && primary.contains(bar)) return bar.getBoundingClientRect().width > 20;
-    const rect = bar.getBoundingClientRect();
-    return rect.width > 20 && rect.bottom > 0;
+    if (bar.closest("ytd-watch-flexy #below, ytd-watch-flexy #primary-inner, #primary-inner #below")) {
+      return bar.getBoundingClientRect().width > 20;
+    }
+    return false;
   }
 
   function ensureBar() {
@@ -526,7 +576,8 @@ html.yvp-clip-active .ytp-progress-bar-container{
     }
     try {
       ensureBar();
-      if (active) ensureMarkers();
+      syncBarVisibility();
+      if (active && !isFullscreenUi()) ensureMarkers();
     } catch (err) {
       console.warn("[YVP] inject failed", err);
     }
@@ -537,11 +588,20 @@ html.yvp-clip-active .ytp-progress-bar-container{
     inject();
   }
 
+  // fullscreen / theater
+  document.addEventListener("fullscreenchange", syncBarVisibility);
+  document.addEventListener("webkitfullscreenchange", syncBarVisibility);
+  window.addEventListener("resize", () => {
+    syncBarVisibility();
+    scheduleLayout();
+  });
+
   return {
     inject,
     onNavigated,
     deactivate,
     isActive: () => active,
     layoutMarkers: scheduleLayout,
+    syncBarVisibility,
   };
 })();
