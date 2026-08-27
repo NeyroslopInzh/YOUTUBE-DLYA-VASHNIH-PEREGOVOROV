@@ -59,41 +59,50 @@ def _use_inprocess_ytdlp() -> bool:
     return True
 
 
+def _format_hms(total_seconds: float) -> str:
+    ms_total = max(0, int(round(float(total_seconds) * 1000)))
+    h, rem = divmod(ms_total, 3600_000)
+    m, rem = divmod(rem, 60_000)
+    s, ms = divmod(rem, 1000)
+    return f"{h:02d}:{m:02d}:{s:02d}.{ms:03d}"
+
+
 def parse_time(value: str) -> str:
     value = value.strip()
     if not value:
         raise ClipperError(_t("err.time_empty"))
 
-    if re.fullmatch(r"\d+", value):
-        total = int(value)
-        h, rem = divmod(total, 3600)
-        m, s = divmod(rem, 60)
-        return f"{h:02d}:{m:02d}:{s:02d}"
+    if re.fullmatch(r"\d+(?:\.\d+)?", value):
+        return _format_hms(float(value))
 
     parts = value.split(":")
-    if len(parts) == 2:
-        m, s = parts
-        return f"00:{int(m):02d}:{int(s):02d}"
-    if len(parts) == 3:
-        h, m, s = parts
-        return f"{int(h):02d}:{int(m):02d}:{int(s):02d}"
+    try:
+        if len(parts) == 2:
+            m, s = parts
+            total = int(m) * 60 + float(s)
+            return _format_hms(total)
+        if len(parts) == 3:
+            h, m, s = parts
+            total = int(h) * 3600 + int(m) * 60 + float(s)
+            return _format_hms(total)
+    except ValueError as exc:
+        raise ClipperError(_t("err.time_invalid", value=value)) from exc
 
     raise ClipperError(_t("err.time_invalid", value=value))
 
 
-def _time_to_seconds(value: str) -> int:
+def _time_to_seconds(value: str) -> float:
     normalized = parse_time(value)
-    h, m, s = (int(x) for x in normalized.split(":"))
-    return h * 3600 + m * 60 + s
+    h, m, rest = normalized.split(":")
+    return int(h) * 3600 + int(m) * 60 + float(rest)
 
 
 def _build_download_ranges(start: str, end: str):
     from yt_dlp.utils import download_range_func
 
-    start_sec = float(_time_to_seconds(start))
-    end_sec = float(_time_to_seconds(end))
+    start_sec = _time_to_seconds(start)
+    end_sec = _time_to_seconds(end)
     return download_range_func([], [(start_sec, end_sec)])
-
 
 def sanitize_filename(name: str) -> str:
     cleaned = re.sub(r'[<>:"/\\|?*]', "_", name.strip())

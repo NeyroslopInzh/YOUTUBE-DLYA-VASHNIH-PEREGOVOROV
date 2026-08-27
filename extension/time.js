@@ -3,17 +3,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // See ../../LICENSE
 
-/** Time helpers — same formats as desktop app (MM:SS, HH:MM:SS, seconds). */
+/** Time helpers — MM:SS[.mmm], HH:MM:SS[.mmm], or seconds (int/float). */
 
 function secondsToTime(totalSeconds) {
-  const sec = Math.max(0, Math.floor(Number(totalSeconds) || 0));
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
+  const msTotal = Math.max(0, Math.round((Number(totalSeconds) || 0) * 1000));
+  const h = Math.floor(msTotal / 3600000);
+  const m = Math.floor((msTotal % 3600000) / 60000);
+  const s = Math.floor((msTotal % 60000) / 1000);
+  const ms = msTotal % 1000;
+  const frac = `.${String(ms).padStart(3, "0")}`;
   if (h > 0) {
-    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}${frac}`;
   }
-  return `${m}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}${frac}`;
 }
 
 function parseTimeToSeconds(value) {
@@ -21,18 +23,18 @@ function parseTimeToSeconds(value) {
   if (!raw) {
     throw new Error("Время не указано");
   }
-  if (/^\d+$/.test(raw)) {
-    return parseInt(raw, 10);
+  if (/^\d+(\.\d+)?$/.test(raw)) {
+    return Number(raw);
   }
-  const parts = raw.split(":").map((p) => parseInt(p, 10));
-  if (parts.some((n) => Number.isNaN(n))) {
+  const parts = raw.split(":");
+  if (parts.some((p) => p === "" || Number.isNaN(Number(p)))) {
     throw new Error(`Неверный формат времени: ${raw}`);
   }
   if (parts.length === 2) {
-    return parts[0] * 60 + parts[1];
+    return Number(parts[0]) * 60 + Number(parts[1]);
   }
   if (parts.length === 3) {
-    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    return Number(parts[0]) * 3600 + Number(parts[1]) * 60 + Number(parts[2]);
   }
   throw new Error(`Неверный формат времени: ${raw}`);
 }

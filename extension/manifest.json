@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL",
   "short_name": "YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL",
-  "version": "4.0.3",
+  "version": "5.0.0",
   "description": "YouTube отрезок → desktop app. Авто-запуск через yvp:// (GNU GPL v3).",
   "action": {
     "default_title": "YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL",
