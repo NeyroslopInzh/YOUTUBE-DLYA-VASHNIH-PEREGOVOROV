@@ -508,7 +508,7 @@ html.yvp-fs-hide-bar #yvp-clip-bar,
 
   function deactivate() {
     active = false;
-    busy = false;
+    setBusy(false);
     setYtScrubberBlocked(false);
     stopLoop();
     destroyMarkers();
