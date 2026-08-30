@@ -34,9 +34,17 @@ EXCLUDES = [
 
 datas = []
 binaries = []
-hiddenimports = []
+hiddenimports = [
+    "PIL._tkinter_finder",
+    "PIL.ImageTk",
+    "PIL._imagingtk",
+    "PIL.Image",
+    "PIL.ImageDraw",
+    "tkinter",
+    "_tkinter",
+]
 
-for package in ("customtkinter", "yt_dlp", "pystray"):
+for package in ("customtkinter", "yt_dlp", "pystray", "PIL"):
     pkg_datas, pkg_binaries, pkg_hidden = collect_all(package)
     datas += pkg_datas
     binaries += pkg_binaries
@@ -73,7 +81,7 @@ a = Analysis(
     ],
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=[os.path.join(SPEC_DIR, "runtime_tmpdir.py")],
     excludes=EXCLUDES,
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -93,8 +101,8 @@ exe = EXE(
     name=APP_NAME_STR,
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,
-    upx=True,
+    strip=False,
+    upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,

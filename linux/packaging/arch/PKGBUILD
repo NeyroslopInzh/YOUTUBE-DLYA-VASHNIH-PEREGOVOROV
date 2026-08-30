@@ -1,7 +1,7 @@
 ﻿pkgname=yvp-vashnie-peregovori
 pkgver=5.0.0
-pkgrel=1
-pkgdesc="YOUTUBE VIDEOS DOWNLOAD FOR VASHNIE PEREGOVORI 2002 KRUTO COOL SOSAL вЂ” РІС‹СЂРµР·РєР° РѕС‚СЂРµР·РєРѕРІ YouTube РІ MP4"
+pkgrel=2
+pkgdesc="YouTube segment clipper — cut MP4 clips via yt-dlp + ffmpeg"
 url="https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV"
 arch=('x86_64')
 license=('GPL-3.0-or-later')
@@ -14,6 +14,8 @@ depends=(
   'gcc-libs'
   'tk'
   'ffmpeg'
+  'shared-mime-info'
+  'desktop-file-utils'
 )
 makedepends=(
   'python'
@@ -30,14 +32,27 @@ _project_root="$startdir/../../.."
 
 prepare() {
   rm -rf "$srcdir/buildroot"
-  mkdir -p "$srcdir/buildroot/src" "$srcdir/buildroot/linux"
+  mkdir -p "$srcdir/buildroot/src" "$srcdir/buildroot/linux" \
+    "$srcdir/buildroot/extension" "$srcdir/buildroot/scripts"
 
   rsync -a "$_project_root/src/" "$srcdir/buildroot/src/"
   rsync -a "$_project_root/linux/" "$srcdir/buildroot/linux/"
+  rsync -a "$_project_root/extension/" "$srcdir/buildroot/extension/"
+  if [[ -d "$_project_root/assets" ]]; then
+    rsync -a "$_project_root/assets/" "$srcdir/buildroot/assets/"
+  fi
+  if [[ -f "$_project_root/scripts/sync_extension_manifest.py" ]]; then
+    install -Dm644 "$_project_root/scripts/sync_extension_manifest.py" \
+      "$srcdir/buildroot/scripts/sync_extension_manifest.py"
+  fi
 }
 
 build() {
   cd "$srcdir/buildroot"
+  export TMPDIR="${XDG_CACHE_HOME:-$HOME/.cache}/yvp-clipper/tmp"
+  mkdir -p "$TMPDIR"
+  export TEMP="$TMPDIR"
+  export TMP="$TMPDIR"
   python -m venv .build-venv
   source .build-venv/bin/activate
   python -m pip install --upgrade pip
@@ -46,10 +61,37 @@ build() {
 }
 
 package() {
+  install -dm755 "$pkgdir/usr/lib/${pkgname}"
   install -dm755 "$pkgdir/usr/bin"
   install -dm755 "$pkgdir/usr/share/applications"
+  install -dm755 "$pkgdir/usr/share/mime/packages"
+  install -dm755 "$pkgdir/usr/share/${pkgname}/extension"
 
-  install -Dm755 "$srcdir/buildroot/dist/linux/${_app_name}" "$pkgdir/usr/bin/${pkgname}"
+  install -Dm755 "$srcdir/buildroot/dist/linux/${_app_name}" \
+    "$pkgdir/usr/lib/${pkgname}/yvp-clipper.bin"
+
+  cat >"$pkgdir/usr/bin/${pkgname}" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+export TMPDIR="${XDG_CACHE_HOME:-$HOME/.cache}/yvp-clipper/tmp"
+export TEMP="$TMPDIR"
+export TMP="$TMPDIR"
+mkdir -p "$TMPDIR"
+exec /usr/lib/yvp-vashnie-peregovori/yvp-clipper.bin "$@"
+EOF
+  chmod 755 "$pkgdir/usr/bin/${pkgname}"
+
+  rsync -a "$srcdir/buildroot/extension/" "$pkgdir/usr/share/${pkgname}/extension/"
+
   install -Dm644 "$startdir/${pkgname}.desktop" \
     "$pkgdir/usr/share/applications/${pkgname}.desktop"
+
+  cat >"$pkgdir/usr/share/mime/packages/${pkgname}.xml" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="x-scheme-handler/yvp">
+    <comment>YVP Clipper URL</comment>
+  </mime-type>
+</mime-info>
+EOF
 }

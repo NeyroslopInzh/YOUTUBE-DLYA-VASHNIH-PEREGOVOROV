@@ -45,6 +45,10 @@ def install_root() -> Path | None:
     return None
 
 
+def _linux_system_extension() -> Path:
+    return Path("/usr/share/yvp-vashnie-peregovori/extension")
+
+
 def extension_dir() -> Path:
     """Directory to load as unpacked Chromium extension."""
     installed = install_root()
@@ -52,6 +56,10 @@ def extension_dir() -> Path:
         ext = installed / "extension"
         if (ext / "manifest.json").is_file():
             return ext
+
+    system_ext = _linux_system_extension()
+    if (system_ext / "manifest.json").is_file():
+        return system_ext
 
     frozen = getattr(sys, "frozen", False)
     if frozen:

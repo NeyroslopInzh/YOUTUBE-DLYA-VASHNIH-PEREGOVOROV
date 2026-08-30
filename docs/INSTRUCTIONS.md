@@ -50,6 +50,8 @@ tar xzf YVPClipper-linux-installer.tar.gz
 ./install.sh
 ```
 
+`install.sh` понимает и тарболл (скрипт рядом с бинарём), и дерево репозитория (`linux/install.sh` после `linux/build.sh`). Не запускай от root. PyInstaller onefile распаковывается в `~/.cache/yvp-clipper/tmp`, не в `/tmp`.
+
 ### Исходники / сборка
 ```bash
 chmod +x linux/run.sh linux/build-installer.sh

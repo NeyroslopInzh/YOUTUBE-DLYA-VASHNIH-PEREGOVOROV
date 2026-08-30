@@ -11,11 +11,38 @@ function yvpSleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function yvpDirectHttp(url, init) {
+  return fetch(url, init).then(async (res) => {
+    const data = await res.json().catch(() => ({}));
+    return { httpOk: res.ok, status: res.status, data };
+  });
+}
+
+function yvpHttp(url, init) {
+  const payload = { type: "YVP_HTTP", url, init: init || {} };
+  if (typeof chrome === "undefined" || !chrome.runtime || !chrome.runtime.id) {
+    return yvpDirectHttp(url, init);
+  }
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(payload, (response) => {
+      if (chrome.runtime.lastError) {
+        yvpDirectHttp(url, init).then(resolve, reject);
+        return;
+      }
+      if (response?.networkError) {
+        reject(new Error(response.networkError));
+        return;
+      }
+      resolve(response);
+    });
+  });
+}
+
 async function yvpCheckAppBridge() {
   try {
-    const res = await fetch(`${YVP_APP_BRIDGE_URL}/health`, { method: "GET" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const info = await res.json();
+    const res = await yvpHttp(`${YVP_APP_BRIDGE_URL}/health`, { method: "GET" });
+    if (!res.httpOk) throw new Error(`HTTP ${res.status}`);
+    const info = res.data;
     if (info.ok && info.service === "yvp-app-bridge") {
       return info;
     }
@@ -49,39 +76,38 @@ async function yvpWaitForAppBridge(timeoutMs = YVP_APP_LAUNCH_TIMEOUT_MS) {
 }
 
 async function yvpEnsureAppRunning() {
-  let info = await yvpCheckAppBridge();
-  if (info) return { ok: true, info };
-
+  // Protocol click must stay in the user-gesture turn (before any await).
+  // Second instance exits immediately if the bridge is already up.
   yvpLaunchAppViaProtocol();
-  info = await yvpWaitForAppBridge();
+  const info = await yvpWaitForAppBridge();
   if (info) return { ok: true, info };
 
   return {
     ok: false,
     error:
-      "Не удалось запустить desktop-приложение. Если Chrome спрашивает «Открыть приложение?» — нажми Разрешить.",
+      "Не удалось запустить desktop-приложение. Если браузер спрашивает «Открыть приложение?» — нажми Разрешить.",
   };
 }
 
 async function yvpStartClip(payload) {
-  const res = await fetch(`${YVP_APP_BRIDGE_URL}/clip`, {
+  const res = await yvpHttp(`${YVP_APP_BRIDGE_URL}/clip`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
+  const data = res.data || {};
+  if (!res.httpOk) {
     throw new Error(data.error || `HTTP ${res.status}`);
   }
   return data;
 }
 
 async function yvpFetchJob(jobId) {
-  const res = await fetch(`${YVP_APP_BRIDGE_URL}/jobs/${jobId}`);
-  if (!res.ok) {
+  const res = await yvpHttp(`${YVP_APP_BRIDGE_URL}/jobs/${jobId}`, { method: "GET" });
+  if (!res.httpOk) {
     throw new Error(`App bridge HTTP ${res.status}`);
   }
-  return res.json();
+  return res.data;
 }
 
 /**
