@@ -2,8 +2,21 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+export TMPDIR="${XDG_CACHE_HOME:-$HOME/.cache}/yvp-clipper/tmp"
+mkdir -p "$TMPDIR"
+export TEMP="$TMPDIR"
+export TMP="$TMPDIR"
+
+VENV="${YVP_BUILD_VENV:-.build-venv}"
+if [[ ! -x "$VENV/bin/python" ]]; then
+  python3 -m venv "$VENV"
+fi
+# shellcheck disable=SC1091
+source "$VENV/bin/activate"
+
 echo "[Linux] Installing dependencies..."
-python3 -m pip install -r src/requirements.txt -r linux/requirements.txt
+python -m pip install -U pip
+python -m pip install -r src/requirements.txt -r linux/requirements.txt
 
 if ! command -v ffmpeg >/dev/null; then
   echo "ERROR: ffmpeg not found. Install it first."
@@ -14,4 +27,4 @@ if ! command -v ffmpeg >/dev/null; then
 fi
 
 echo "[Linux] Starting..."
-python3 src/main.py
+python src/main.py
