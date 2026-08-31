@@ -1,5 +1,5 @@
 ﻿pkgname=yvp-vashnie-peregovori
-pkgver=5.0.0
+pkgver=5.0.1
 pkgrel=2
 pkgdesc="YouTube segment clipper — cut MP4 clips via yt-dlp + ffmpeg"
 url="https://github.com/NeyroslopInzh/YOUTUBE-DLYA-VASHNIH-PEREGOVOROV"
